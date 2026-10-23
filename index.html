@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="th" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIS - Shift Management & Check-in</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        ais: {
+                            light: '#a2d264',
+                            DEFAULT: '#8cc63f', // AIS Green primary
+                            dark: '#73a530',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Sarabun', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', 'Sarabun', sans-serif; }
+        /* Custom scrollbar for tables */
+        .table-container::-webkit-scrollbar { height: 8px; }
+        .table-container::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        .table-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark .table-container::-webkit-scrollbar-track { background: #334155; }
+        .dark .table-container::-webkit-scrollbar-thumb { background: #475569; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300 min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <header class="bg-ais text-white shadow-md dark:bg-gray-800 dark:border-b dark:border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <!-- Mock Logo -->
+                <div class="bg-white text-ais font-bold rounded-full w-10 h-10 flex items-center justify-center text-xl shadow-inner">
+                    A
+                </div>
+                <h1 class="text-xl font-bold tracking-wide hidden sm:block">ShiftSync <span class="text-sm font-normal opacity-80">by OutsourceTeam</span></h1>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <!-- Dark Mode Toggle -->
+                <button id="theme-toggle" class="p-2 rounded-full hover:bg-black/10 transition-colors" title="Toggle Dark/Light Mode">
+                    <svg id="theme-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Moon icon (default) -->
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                    </svg>
+                </button>
+                
+                <div id="user-menu" class="hidden items-center gap-3 border-l border-white/30 pl-4">
+                    <span class="text-sm font-medium" id="current-username">Team Lead</span>
+                    <button onclick="logout()" class="text-sm bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded-md transition-colors shadow-sm">
+                        ออกจากระบบ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
+        
+        <!-- ================= LOGIN VIEW ================= -->
+        <div id="login-view" class="w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden transform transition-all">
+            <div class="bg-ais dark:bg-gray-700 h-2 w-full"></div>
+            <div class="p-8">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">เข้าสู่ระบบ</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">กรุณาเข้าสู่ระบบก่อนทำการ Check-in</p>
+                </div>
+                
+                <form onsubmit="handleLogin(event)" class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ชื่อผู้ใช้งาน (Username)</label>
+                        <input type="text" id="username" required placeholder="เช่น user_team1" class="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-ais focus:border-ais dark:bg-gray-900 dark:border-gray-600 dark:text-white outline-none transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">รหัสผ่าน (Password)</label>
+                        <input type="password" required placeholder="••••••••" class="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-ais focus:border-ais dark:bg-gray-900 dark:border-gray-600 dark:text-white outline-none transition-all">
+                    </div>
+                    <button type="submit" class="w-full bg-ais hover:bg-ais-dark text-white font-semibold py-2.5 rounded-lg shadow-md transition-colors mt-2">
+                        เข้าสู่ระบบ
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ================= DASHBOARD VIEW (Hidden by default) ================= -->
+        <div id="dashboard-view" class="hidden w-full max-w-7xl space-y-6 animate-fade-in">
+            
+            <!-- Top Row: Camera & Notifications -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Camera Check-in Section -->
+                <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                        <h3 class="text-lg font-bold flex items-center gap-2">
+                            <svg class="w-5 h-5 text-ais" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            ระบบลงเวลาปฏิบัติงาน (WFH)
+                        </h3>
+                        <span id="current-time" class="text-sm font-medium bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">--:--:--</span>
+                    </div>
+                    <div class="p-6">
+                        <div class="relative bg-gray-200 dark:bg-gray-900 rounded-xl overflow-hidden aspect-video flex items-center justify-center mb-6 shadow-inner">
+                            <video id="webcam-feed" autoplay playsinline class="w-full h-full object-cover hidden"></video>
+                            
+                            <!-- Fallback / Loading UI -->
+                            <div id="webcam-fallback" class="text-center text-gray-500 dark:text-gray-400">
+                                <svg class="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                <p>กำลังเชื่อมต่อกล้อง...</p>
+                                <button onclick="startCamera()" class="mt-2 text-sm text-ais hover:underline">คลิกเพื่ออนุญาตการเข้าถึงกล้อง</button>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-4">
+                            <button onclick="handleCheckIn('in')" class="flex-1 bg-ais hover:bg-ais-dark text-white font-semibold py-3 rounded-xl shadow-md transition-colors flex items-center justify-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
+                                ถ่ายรูป & Check In
+                            </button>
+                            <button onclick="handleCheckIn('out')" class="flex-1 bg-gray-800 hover:bg-gray-900 dark:bg-gray-600 dark:hover:bg-gray-500 text-white font-semibold py-3 rounded-xl shadow-md transition-colors flex items-center justify-center gap-2">
+                                ถ่ายรูป & Check Out
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                            </button>
+                        </div>
+                        <div id="check-status" class="mt-4 text-sm text-center font-medium h-5"></div>
+                    </div>
+                </div>
+
+                <!-- Notifications & Rules (Right Column) -->
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col">
+                    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+                        <h3 class="text-lg font-bold">แจ้งเตือน & กฎระเบียบ</h3>
+                    </div>
+                    <div class="p-6 flex-grow flex flex-col gap-4">
+                        <div class="bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-400 p-4 rounded-r-lg">
+                            <h4 class="text-sm font-semibold text-yellow-800 dark:text-yellow-300">แจ้งเตือนสาย / ออกก่อน</h4>
+                            <p class="text-xs text-yellow-700 dark:text-yellow-400 mt-1">
+                                ระบบจะส่งแจ้งเตือนหาก Check-in เกินเวลาที่กำหนด 15 นาที หรือ Check-out ก่อนเวลา
+                            </p>
+                        </div>
+                        <div class="bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-400 p-4 rounded-r-lg">
+                            <h4 class="text-sm font-semibold text-blue-800 dark:text-blue-300">พิกัดสถานที่ (WFH)</h4>
+                            <p class="text-xs text-blue-700 dark:text-blue-400 mt-1">
+                                โหมดการทำงานปัจจุบันไม่มีการ Tracking GPS โปรดตรวจสอบให้แน่ใจว่ากล้องสามารถบันทึกภาพใบหน้าได้ชัดเจน
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schedule Table Section -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
+                    <h3 class="text-lg font-bold">ตารางกะการทำงาน (สัปดาห์ปัจจุบัน)</h3>
+                    <div class="flex gap-2">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-ais/10 text-ais-dark dark:text-ais-light">
+                            <span class="w-2 h-2 rounded-full bg-ais"></span> ทีม 1 (จ. - ศ.)
+                        </span>
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                            <span class="w-2 h-2 rounded-full bg-purple-500"></span> ทีม 2 (ศ. - จ.)
+                        </span>
+                    </div>
+                </div>
+                <div class="p-0 table-container overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-100 dark:bg-gray-700 dark:text-gray-300">
+                            <tr>
+                                <th class="px-6 py-4 font-semibold whitespace-nowrap">พนักงาน / ทีม</th>
+                                <th class="px-4 py-4 font-semibold text-center">จันทร์</th>
+                                <th class="px-4 py-4 font-semibold text-center">อังคาร</th>
+                                <th class="px-4 py-4 font-semibold text-center">พุธ</th>
+                                <th class="px-4 py-4 font-semibold text-center">พฤหัสบดี</th>
+                                <th class="px-4 py-4 font-semibold text-center">ศุกร์</th>
+                                <th class="px-4 py-4 font-semibold text-center">เสาร์</th>
+                                <th class="px-4 py-4 font-semibold text-center">อาทิตย์</th>
+                            </tr>
+                        </thead>
+                        <tbody id="schedule-tbody" class="divide-y divide-gray-100 dark:divide-gray-700">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Profile Management (Admin) Section -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                    <h3 class="text-lg font-bold">จัดการโปรไฟล์ทีมงาน (Admin)</h3>
+                    <button class="bg-ais hover:bg-ais-dark text-white text-sm font-medium px-4 py-2 rounded-lg shadow-sm transition-colors flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        เพิ่มทีมงาน
+                    </button>
+                </div>
+                <div class="p-0 table-container overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700/50 dark:text-gray-300 border-b dark:border-gray-700">
+                            <tr>
+                                <th class="px-6 py-3 font-medium">ชื่อ-นามสกุล</th>
+                                <th class="px-6 py-3 font-medium">ทีม</th>
+                                <th class="px-6 py-3 font-medium">กะประจำ (Default Shift)</th>
+                                <th class="px-6 py-3 font-medium">สถานะ</th>
+                                <th class="px-6 py-3 font-medium text-right">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="profiles-tbody" class="divide-y divide-gray-50 dark:divide-gray-700">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center py-4 text-xs text-gray-400 dark:text-gray-500">
+        &copy; 2026 Outsource Shift Management Prototype. WFH Mode Enabled.
+    </footer>
+
+    <!-- Custom Notification Modal (Replacement for Alert) -->
+    <div id="msg-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-2xl max-w-sm w-full transform scale-95 transition-transform duration-200" id="msg-modal-content">
+            <h3 id="msg-title" class="text-lg font-bold mb-2 dark:text-white">Notification</h3>
+            <p id="msg-body" class="text-gray-600 dark:text-gray-300 text-sm mb-6">Message goes here...</p>
+            <button onclick="closeModal()" class="w-full bg-ais hover:bg-ais-dark text-white font-medium py-2 rounded-lg transition-colors">ตกลง</button>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // --- State Management ---
+        let isDarkMode = false;
+        
+        // Mock Data: Users & Profiles
+        const users = [
+            { id: 1, name: "สมชาย ใจดี", team: 1, defaultShift: "08.30 - 17.30", status: "Active" },
+            { id: 2, name: "สมหญิง รักงาน", team: 1, defaultShift: "10.00 - 19.00", status: "Active" },
+            { id: 3, name: "วิชัย มุ่งมั่น", team: 1, defaultShift: "18.00 - 03.00", status: "Active" },
+            { id: 4, name: "ดวงดาว พราวแสง", team: 1, defaultShift: "23.30 - 08.30", status: "Active" },
+            { id: 5, name: "ตะวัน เบิกบาน", team: 2, defaultShift: "07.00 - 19.00", status: "Active" },
+            { id: 6, name: "จันทร์เพ็ญ สวยงาม", team: 2, defaultShift: "19.00 - 07.00", status: "Active" }
+        ];
+
+        // Mock Data: Schedule 
+        // Key: Day index (0=Mon, 1=Tue, ... 6=Sun)
+        // Value: Shift string, or "OFF", or "OFF_SUB_NAME"
+        const scheduleData = [
+            // Team 1 (Mon-Fri)
+            { userId: 1, shifts: ["08.30-17.30", "08.30-17.30", "08.30-17.30", "08.30-17.30", "08.30-17.30", "OFF", "OFF"] },
+            { userId: 2, shifts: ["10.00-19.00", "10.00-19.00", "10.00-19.00", "10.00-19.00", "10.00-19.00", "OFF", "OFF"] },
+            { userId: 3, shifts: ["18.00-03.00", "18.00-03.00", "OFF_ตะวัน", "18.00-03.00", "18.00-03.00", "OFF", "OFF"] }, // Example of substitution on Wednesday
+            { userId: 4, shifts: ["23.30-08.30", "23.30-08.30", "23.30-08.30", "23.30-08.30", "23.30-08.30", "OFF", "OFF"] },
+            // Team 2 (Fri-Mon) -> Works Fri, Sat, Sun, Mon. Off Tue, Wed, Thu.
+            { userId: 5, shifts: ["07.00-19.00", "OFF", "OFF", "OFF", "07.00-19.00", "07.00-19.00", "07.00-19.00"] },
+            { userId: 6, shifts: ["19.00-07.00", "OFF", "OFF", "OFF", "19.00-07.00", "19.00-07.00", "19.00-07.00"] }
+        ];
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Setup Theme
+            const storedTheme = localStorage.getItem('theme');
+            if (storedTheme === 'dark' || (!storedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                setDarkMode(true);
+            }
+
+            // Theme Toggle Listener
+            document.getElementById('theme-toggle').addEventListener('click', () => {
+                setDarkMode(!isDarkMode);
+            });
+
+            // Start Live Clock
+            setInterval(updateClock, 1000);
+            updateClock();
+        });
+
+        // --- Theme Logic ---
+        function setDarkMode(isDark) {
+            isDarkMode = isDark;
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-icon');
+            
+            if (isDarkMode) {
+                html.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+                // Sun Icon
+                icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>`;
+            } else {
+                html.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+                // Moon Icon
+                icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>`;
+            }
+        }
+
+        // --- Clock Logic ---
+        function updateClock() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const clockEl = document.getElementById('current-time');
+            if(clockEl) clockEl.innerText = timeStr;
+        }
+
+        // --- Auth Logic ---
+        function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            
+            // Mock Login Success
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('dashboard-view').classList.remove('hidden');
+            document.getElementById('user-menu').classList.replace('hidden', 'flex');
+            document.getElementById('current-username').innerText = username || 'User';
+            
+            // Initialize Dashboard Data
+            renderSchedule();
+            renderProfiles();
+            startCamera();
+        }
+
+        function logout() {
+            document.getElementById('dashboard-view').classList.add('hidden');
+            document.getElementById('login-view').classList.remove('hidden');
+            document.getElementById('user-menu').classList.replace('flex', 'hidden');
+            
+            // Stop Camera
+            const video = document.getElementById('webcam-feed');
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+            video.classList.add('hidden');
+            document.getElementById('webcam-fallback').classList.remove('hidden');
+        }
+
+        // --- Camera & Check-in Logic ---
+        async function startCamera() {
+            const video = document.getElementById('webcam-feed');
+            const fallback = document.getElementById('webcam-fallback');
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                video.classList.remove('hidden');
+                fallback.classList.add('hidden');
+            } catch (err) {
+                console.warn("Camera access denied or unavailable", err);
+                fallback.innerHTML = `<p class="text-red-500 dark:text-red-400 text-sm">ไม่สามารถเข้าถึงกล้องได้<br>(ต้องรันบน HTTPS หรือ Localhost)</p>`;
+            }
+        }
+
+        function handleCheckIn(type) {
+            const statusEl = document.getElementById('check-status');
+            const now = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+            
+            if (type === 'in') {
+                statusEl.innerHTML = `<span class="text-ais font-semibold">✅ Check-in สำเร็จเวลา ${now} (บันทึกภาพแล้ว)</span>`;
+                showModal("สำเร็จ", `บันทึกการ Check-in เวลา ${now} เรียบร้อยแล้ว`);
+            } else {
+                statusEl.innerHTML = `<span class="text-gray-600 dark:text-gray-300 font-semibold">👋 Check-out สำเร็จเวลา ${now} (บันทึกภาพแล้ว)</span>`;
+                showModal("สำเร็จ", `บันทึกการ Check-out เวลา ${now} เรียบร้อยแล้ว`);
+            }
+            
+            // Add a visual flash effect to simulate capturing photo
+            const videoContainer = document.querySelector('.aspect-video');
+            videoContainer.classList.add('bg-white');
+            setTimeout(() => videoContainer.classList.remove('bg-white'), 150);
+        }
+
+        // --- Render UI Logic ---
+        function renderSchedule() {
+            const tbody = document.getElementById('schedule-tbody');
+            tbody.innerHTML = '';
+            
+            scheduleData.forEach(row => {
+                const user = users.find(u => u.id === row.userId);
+                if(!user) return;
+                
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors";
+                
+                // Profile column
+                let html = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${user.team === 1 ? 'bg-ais' : 'bg-purple-500'}">
+                                ${user.name.charAt(0)}
+                            </div>
+                            <div>
+                                <div class="font-medium text-gray-900 dark:text-white">${user.name}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">ทีม ${user.team}</div>
+                            </div>
+                        </div>
+                    </td>
+                `;
+                
+                // Days columns
+                row.shifts.forEach(shift => {
+                    html += `<td class="px-4 py-4 text-center">`;
+                    if (shift === "OFF") {
+                        html += `<span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">หยุด</span>`;
+                    } else if (shift.startsWith("OFF_")) {
+                        const subName = shift.split('_')[1];
+                        html += `
+                            <div class="flex flex-col items-center gap-1">
+                                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 border border-red-100 dark:border-red-800">หยุด</span>
+                                <span class="text-[10px] text-gray-500 dark:text-gray-400">แทนโดย: ${subName}</span>
+                            </div>
+                        `;
+                    } else {
+                        html += `<span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium ${user.team === 1 ? 'bg-ais/10 text-ais-dark dark:text-ais-light border border-ais/20' : 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200 dark:border-purple-800'}">${shift}</span>`;
+                    }
+                    html += `</td>`;
+                });
+                
+                tr.innerHTML = html;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderProfiles() {
+            const tbody = document.getElementById('profiles-tbody');
+            tbody.innerHTML = '';
+            
+            users.forEach(user => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors";
+                
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">${user.name}</td>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.team === 1 ? 'bg-ais/10 text-ais-dark dark:text-ais-light' : 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'}">
+                            ทีม ${user.team}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-gray-600 dark:text-gray-300">${user.defaultShift}</td>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                            ${user.status}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <button onclick="editUser(${user.id})" class="text-blue-600 dark:text-blue-400 hover:underline text-sm mr-3">Edit</button>
+                        <button onclick="deleteUser(${user.id})" class="text-red-600 dark:text-red-400 hover:underline text-sm">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Mock Admin Actions
+        function editUser(id) {
+            const user = users.find(u => u.id === id);
+            showModal("แก้ไขข้อมูล", `เปิดหน้าต่างแก้ไขข้อมูลสำหรับคุณ: ${user.name}`);
+        }
+
+        function deleteUser(id) {
+            const user = users.find(u => u.id === id);
+            showModal("ยืนยันการลบ", `คุณต้องการลบข้อมูลของคุณ: ${user.name} หรือไม่? (นี่คือตัวอย่าง Prototype)`);
+        }
+
+        // --- Custom Modal (Avoid alert) ---
+        function showModal(title, message) {
+            document.getElementById('msg-title').innerText = title;
+            document.getElementById('msg-body').innerText = message;
+            const modal = document.getElementById('msg-modal');
+            const content = document.getElementById('msg-modal-content');
+            
+            modal.classList.replace('hidden', 'flex');
+            // Small animation trick
+            setTimeout(() => {
+                content.classList.replace('scale-95', 'scale-100');
+            }, 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('msg-modal');
+            const content = document.getElementById('msg-modal-content');
+            
+            content.classList.replace('scale-100', 'scale-95');
+            setTimeout(() => {
+                modal.classList.replace('flex', 'hidden');
+            }, 200); // Wait for transition
+        }
+    </script>
+</body>
+</html>
