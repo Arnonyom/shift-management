@@ -1,0 +1,806 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shift Check-in</title>
+<style>
+/* เลย์เอาต์: แถบหัวสีขาว มีเส้นเขียวไลม์ด้านบน, เนื้อหาเป็นการ์ดบนพื้นเขียวอ่อน | ธีมเขียว-ขาว (โทนไลม์กรีน) | สลับสว่าง/มืดได้ */
+:root{
+  --bg:#f2f7ea; --card:#ffffff; --ink:#18240f; --muted:#59694b; --line:#d9e4cb;
+  --brand:#4a8a0d; --brand-ink:#ffffff; --lime:#a6ce39; --brand-soft:#e5f2cc; --brand-text:#3a6f08;
+  --ok:#2f7d17; --ok-bg:#e1f3d3; --warn:#9c5700; --warn-bg:#fff0d0; --bad:#c0262d; --bad-bg:#fde5e5;
+  --off-bg:#edf1e6; --cover:#14668f; --cover-bg:#dff0fa; --shadow:0 1px 2px rgba(24,36,15,.06);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1409; --card:#162011; --ink:#e7f0dc; --muted:#98a98a; --line:#27341f;
+    --brand:#a6ce39; --brand-ink:#14200a; --lime:#a6ce39; --brand-soft:#223214; --brand-text:#c4e56a;
+    --ok:#8fd45a; --ok-bg:#1b3313; --warn:#f0b045; --warn-bg:#3a2a0c; --bad:#ff8f8f; --bad-bg:#3c1818;
+    --off-bg:#1c2718; --cover:#7cc7ee; --cover-bg:#12303f; --shadow:none; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1409; --card:#162011; --ink:#e7f0dc; --muted:#98a98a; --line:#27341f;
+  --brand:#a6ce39; --brand-ink:#14200a; --lime:#a6ce39; --brand-soft:#223214; --brand-text:#c4e56a;
+  --ok:#8fd45a; --ok-bg:#1b3313; --warn:#f0b045; --warn-bg:#3a2a0c; --bad:#ff8f8f; --bad-bg:#3c1818;
+  --off-bg:#1c2718; --cover:#7cc7ee; --cover-bg:#12303f; --shadow:none; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI","Noto Sans Thai",Sarabun,Tahoma,-apple-system,sans-serif}
+[hidden]{display:none!important}
+header{background:var(--card);border-bottom:1px solid var(--line);border-top:4px solid var(--lime);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--card)}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-block:8px}
+.logo{display:flex;align-items:center;gap:9px;font-weight:700;font-size:17px;letter-spacing:.01em}
+.mark{width:26px;height:26px;border-radius:50%;background:var(--lime);display:grid;place-items:center;flex:none}
+.mark::after{content:"";width:11px;height:11px;border-radius:50%;border:3px solid var(--brand-ink);border-top-color:transparent;box-sizing:border-box;transform:rotate(30deg)}
+:root:not([data-theme="dark"]) .mark::after{border-color:#18240f;border-top-color:transparent}
+.right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.who{font-size:14px;display:flex;align-items:center;gap:6px}
+.clock{color:var(--muted);font-variant-numeric:tabular-nums;font-size:13px}
+nav{display:flex;gap:2px;flex-wrap:wrap;padding-bottom:0}
+nav button{border:0;background:none;color:var(--muted);padding:9px 14px;font:inherit;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
+nav button:hover{color:var(--ink)}
+nav button.active{color:var(--brand-text);font-weight:600;border-bottom-color:var(--brand)}
+.badge{background:var(--bad);color:#fff;border-radius:99px;font-size:11px;padding:1px 6px;margin-left:4px}
+main{padding-block:16px 48px}
+section.tab{display:none}
+section.tab.active{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:var(--shadow)}
+h2{margin:0 0 12px;font-size:18px;text-wrap:balance}
+h3{margin:0 0 6px;font-size:15px}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+input,select,textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;min-width:0}
+input[type=checkbox],input[type=radio]{width:auto;accent-color:var(--brand)}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:8px;font:inherit;cursor:pointer}
+.btn:hover{background:var(--off-bg)}
+.btn.sm{padding:5px 10px;font-size:13px}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--brand-ink);font-weight:600}
+.btn.primary:hover{filter:brightness(1.08);background:var(--brand)}
+.btn.outline{border-color:var(--brand);color:var(--brand-text);font-weight:600}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.row>*{flex:1;min-width:min(200px,100%)}
+.head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.head h2{margin:0}
+.grid2{display:grid;grid-template-columns:minmax(280px,420px) minmax(0,1fr);gap:16px}
+.grid2.wide{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}
+@media(max-width:820px){.grid2,.grid2.wide{grid-template-columns:minmax(0,1fr)}}
+video,.shot{width:100%;border-radius:10px;background:#000;aspect-ratio:4/3;object-fit:cover;transform:scaleX(-1);max-width:100%}
+.shot{transform:none}
+.status-box{padding:12px 14px;border-radius:10px;background:var(--off-bg);margin:6px 0 12px}
+.status-box.go{background:var(--brand-soft)}
+.status-box .big{font-size:20px;font-weight:700;display:block;line-height:1.3}
+.pill{display:inline-block;padding:1px 9px;border-radius:99px;font-size:12px;font-weight:600;white-space:nowrap}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}
+.pill.warn{background:var(--warn-bg);color:var(--warn)}
+.pill.bad{background:var(--bad-bg);color:var(--bad)}
+.pill.off{background:var(--off-bg);color:var(--muted)}
+.pill.blue{background:var(--brand-soft);color:var(--brand-text)}
+.pill.cover{background:var(--cover-bg);color:var(--cover)}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.04em}
+.scroll{overflow-x:auto;max-width:100%}
+.num{font-variant-numeric:tabular-nums}
+.sched{min-width:900px}
+.sched th,.sched td{text-align:center;padding:5px 4px;min-width:112px;vertical-align:top}
+.sched td:first-child,.sched th:first-child{text-align:left;min-width:140px;position:sticky;left:0;background:var(--card);z-index:1;padding-left:10px;vertical-align:middle}
+.sched tr.team td{background:var(--off-bg);font-weight:700;text-align:left;font-size:13px;color:var(--brand-text);padding-left:10px}
+.sched tr.me td:first-child{box-shadow:inset 3px 0 0 var(--brand);font-weight:600}
+.sched th.today{color:var(--brand-text);background:var(--brand-soft)}
+.cell{border-radius:8px;padding:5px 6px;font-size:12px;line-height:1.35;min-height:48px;display:flex;flex-direction:column;justify-content:center;gap:1px;text-align:center}
+.cell b{font-weight:600;font-size:12.5px}
+.cell .t{font-variant-numeric:tabular-nums}
+.cell.on{background:var(--brand-soft);color:var(--brand-text)}
+.cell.off{color:var(--muted);min-height:0;padding-block:12px}
+.cell.ovoff{background:repeating-linear-gradient(135deg,var(--off-bg),var(--off-bg) 7px,transparent 7px,transparent 14px);border:1px dashed var(--line);color:var(--muted)}
+.cell.ovoff s{opacity:.7}
+.cell.cov{background:var(--cover-bg);color:var(--cover)}
+.cell.extra{background:var(--warn-bg);color:var(--warn)}
+.cell .rep{font-weight:700;color:var(--cover)}
+.cell .nocover{font-weight:700;color:var(--bad)}
+.cell .att{font-size:11px;margin-top:2px}
+.cell .att.late{color:var(--warn)} .cell .att.ok{color:var(--ok)} .cell .att.miss{color:var(--bad);font-weight:600}
+.editable .cell{cursor:pointer}
+.editable .cell:hover{outline:2px solid var(--brand)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow)}
+.stat b{display:block;font-size:26px;line-height:1.2;font-variant-numeric:tabular-nums}
+.stat span{color:var(--muted);font-size:13px}
+.alert{display:flex;gap:10px;padding:9px 12px;border-radius:8px;margin-bottom:8px;background:var(--off-bg);align-items:flex-start;min-width:0}
+.alert.unread{background:var(--warn-bg)}
+.alert div{min-width:0;overflow-wrap:anywhere}
+.alert small{color:var(--muted);display:block}
+.uncov{background:var(--bad-bg);border:1px solid var(--bad);border-radius:10px;padding:10px 12px;margin-bottom:16px}
+.uncov h3{color:var(--bad)}
+.uncov .item{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:4px 0}
+.thumb{width:56px;height:42px;object-fit:cover;border-radius:6px;cursor:zoom-in;background:var(--off-bg)}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);padding:20px;max-width:520px;width:calc(100% - 24px);max-height:92vh;overflow:auto}
+dialog::backdrop{background:rgba(8,14,4,.55)}
+.days{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.days label{display:flex;align-items:center;gap:4px;margin:0;color:var(--ink);padding:6px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;cursor:pointer}
+.actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+.toasts{position:fixed;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;z-index:50;max-width:min(380px,calc(100vw - 28px))}
+.toast{background:var(--ink);color:var(--bg);padding:11px 14px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.25);font-size:14px;overflow-wrap:anywhere}
+.toast.err{background:var(--bad);color:#fff}.toast.warn{background:var(--warn);color:#fff}.toast.good{background:var(--brand);color:var(--brand-ink)}
+.muted{color:var(--muted)} .small{font-size:13px}
+.legend{display:flex;gap:8px 14px;flex-wrap:wrap;margin:10px 0 0;font-size:12px;color:var(--muted);align-items:center}
+.login-wrap{min-height:calc(100vh - 8px);display:grid;place-items:center;padding-block:24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.login-card{width:min(400px,100%);margin:0}
+.login-card .logo{font-size:20px;margin-bottom:4px}
+.modes{display:grid;gap:8px;margin-top:8px}
+.mode{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.mode.sel{border-color:var(--brand);background:var(--brand-soft)}
+.mode>label.top{display:flex;gap:8px;align-items:center;margin:0;color:var(--ink);font-size:15px;font-weight:600;cursor:pointer}
+.mode .body{margin-top:6px}
+.mode.dis{opacity:.5}
+.shiftrow{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) auto;gap:6px;margin-bottom:6px;align-items:center}
+@media(max-width:480px){.shiftrow{grid-template-columns:1fr 1fr}.shiftrow input:first-child{grid-column:1/-1}}
+@media (prefers-reduced-motion:no-preference){.toast{animation:in .18s ease-out}@keyframes in{from{transform:translateY(8px);opacity:0}}}
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div id="loginView" class="login-wrap" hidden>
+  <form class="card login-card" id="loginForm" autocomplete="on">
+    <div class="logo"><span class="mark"></span>Shift Check-in</div>
+    <p class="muted small" style="margin:0 0 6px">เข้าสู่ระบบด้วยบัญชีของคุณก่อนลงเวลาทำงาน</p>
+    <label for="lUser">ชื่อผู้ใช้</label>
+    <input id="lUser" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+    <label for="lPass">รหัสผ่าน</label>
+    <input id="lPass" name="password" type="password" autocomplete="current-password" required>
+    <div id="lErr" class="pill bad" style="margin-top:12px;display:none;white-space:normal"></div>
+    <button class="btn primary" style="width:100%;margin-top:16px;padding:10px" id="lBtn">เข้าสู่ระบบ</button>
+    <p class="muted small" style="margin:14px 0 0">ใช้งานครั้งแรก ให้ใช้รหัสผ่านเริ่มต้นที่หัวหน้าแจ้ง แล้วระบบจะให้ตั้งรหัสผ่านใหม่ทันที</p>
+    <div style="margin-top:10px;text-align:right"><button type="button" class="btn sm" data-theme-toggle>สลับโหมดสว่าง/มืด</button></div>
+  </form>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="appView" hidden>
+<header>
+  <div class="wrap">
+    <div class="bar">
+      <span class="logo"><span class="mark"></span>Shift Check-in</span>
+      <div class="right">
+        <span class="clock" id="clock"></span>
+        <span class="who"><b id="whoName"></b><span class="pill blue" id="whoRole"></span></span>
+        <button class="btn sm" id="btnTheme" data-theme-toggle title="สลับโหมดสว่าง/มืด" aria-label="สลับโหมดสว่างหรือมืด"></button>
+        <button class="btn sm" id="btnPw">เปลี่ยนรหัสผ่าน</button>
+        <button class="btn sm" id="btnLogout">ออกจากระบบ</button>
+      </div>
+    </div>
+    <nav id="nav" aria-label="เมนู"></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- CHECK-IN -->
+  <section class="tab" id="tab-checkin">
+    <div class="grid2">
+      <div class="card">
+        <video id="video" autoplay playsinline muted></video>
+        <div class="small muted" id="camMsg" style="margin-top:6px">กำลังเปิดกล้อง… (ต้องกดอนุญาตการใช้กล้อง)</div>
+      </div>
+      <div class="card">
+        <h2>ลงเวลาทำงาน</h2>
+        <div class="status-box" id="meBox">กำลังโหลด…</div>
+        <div class="row">
+          <button class="btn primary" id="btnIn" style="padding:11px">Check-in (ถ่ายรูป)</button>
+          <button class="btn outline" id="btnOut" style="padding:11px">Check-out</button>
+        </div>
+        <div id="result" style="margin-top:14px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCHEDULE -->
+  <section class="tab" id="tab-schedule">
+    <div class="card">
+      <div class="head">
+        <h2 id="weekTitle">ตารางกะ</h2>
+        <div style="display:flex;gap:6px">
+          <button class="btn" id="wPrev" aria-label="สัปดาห์ก่อน">◀</button>
+          <button class="btn" id="wNow">สัปดาห์นี้</button>
+          <button class="btn" id="wNext" aria-label="สัปดาห์ถัดไป">▶</button>
+        </div>
+      </div>
+      <div class="scroll"><table class="sched" id="schedTable"></table></div>
+      <div class="legend">
+        <span><span class="pill blue">กะ</span> ตามกะประจำ</span>
+        <span><span class="pill cover">แทน</span> มาทำงานแทนคนอื่น</span>
+        <span><span class="pill warn">เพิ่ม</span> เพิ่มกะ/เปลี่ยนกะ</span>
+        <span><span class="pill off">หยุด</span> หยุด (แสดงชื่อคนแทน)</span>
+        <span id="editHint" hidden>คลิกที่ช่องในตารางเพื่อแก้ไข: หยุด + ระบุคนแทน / เพิ่มกะ / เปลี่ยนกะ</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section class="tab" id="tab-dashboard">
+    <div id="uncovered"></div>
+    <div class="stats" id="stats"></div>
+    <div class="grid2 wide">
+      <div class="card">
+        <h2>สถานะตอนนี้ <span class="muted small" id="todayStr"></span></h2>
+        <div class="scroll"><table id="todayTable"></table></div>
+      </div>
+      <div class="card">
+        <div class="head"><h2>การแจ้งเตือน</h2><button class="btn sm" id="btnReadAll">อ่านทั้งหมด</button></div>
+        <div id="alerts"></div>
+        <div class="small muted">เปิดหน้านี้ค้างไว้เพื่อให้มี pop-up + เสียงเตือนเมื่อมีเหตุการณ์ใหม่</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TEAM -->
+  <section class="tab" id="tab-team">
+    <div class="card">
+      <div class="head"><h2>ทีมและกะ</h2><button class="btn" id="btnAddTeam">+ เพิ่มทีม</button></div>
+      <div class="scroll"><table id="teamTable"></table></div>
+    </div>
+    <div class="card">
+      <div class="head"><h2>บัญชีสมาชิก</h2><button class="btn primary" id="btnAddUser">+ เพิ่มสมาชิก</button></div>
+      <div class="scroll"><table id="userTable"></table></div>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section class="tab" id="tab-history">
+    <div class="card">
+      <h2>ประวัติการเข้างาน</h2>
+      <div class="row" style="align-items:end">
+        <div><label for="hFrom">จากวันที่</label><input type="date" id="hFrom"></div>
+        <div><label for="hTo">ถึงวันที่</label><input type="date" id="hTo"></div>
+        <div><button class="btn primary" id="hGo" style="width:100%">แสดง</button></div>
+      </div>
+      <div class="scroll" style="margin-top:12px"><table id="histTable"></table></div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="tab" id="tab-settings">
+    <div class="card" style="max-width:580px">
+      <h2>ตั้งค่าการแจ้งเตือนและการลงเวลา</h2>
+      <label for="sLate">แจ้งเตือนเมื่อ check-in สายเกิน (นาที)</label><input id="sLate" type="number" min="0" max="999">
+      <label for="sEarly">แจ้งเตือนเมื่อ check-out ก่อนเวลาเลิกกะเกิน (นาที)</label><input id="sEarly" type="number" min="0" max="999">
+      <label for="sNoshow">แจ้งเตือนเมื่อเลยเวลาเริ่มกะแล้วยังไม่ check-in เกิน (นาที)</label><input id="sNoshow" type="number" min="0" max="999">
+      <label for="sOpen">เปิดให้ check-in ล่วงหน้าก่อนกะเริ่ม (นาที)</label><input id="sOpen" type="number" min="0" max="999">
+      <div class="actions"><button class="btn primary" id="sSave">บันทึก</button></div>
+    </div>
+  </section>
+</main>
+</div>
+
+<!-- ================= DIALOGS ================= -->
+<dialog id="dlgPw">
+  <form id="pwForm">
+    <h3 id="pwTitle">เปลี่ยนรหัสผ่าน</h3>
+    <p class="small muted" id="pwHint" style="margin:0"></p>
+    <label for="pwOld">รหัสผ่านเดิม</label><input id="pwOld" type="password" autocomplete="current-password" required>
+    <label for="pwNew">รหัสผ่านใหม่ (อย่างน้อย 8 ตัวอักษร)</label><input id="pwNew" type="password" autocomplete="new-password" minlength="8" required>
+    <label for="pwNew2">ยืนยันรหัสผ่านใหม่</label><input id="pwNew2" type="password" autocomplete="new-password" minlength="8" required>
+    <div class="actions"><button type="button" class="btn" id="pwCancel">ยกเลิก</button><button class="btn primary">บันทึก</button></div>
+  </form>
+</dialog>
+
+<dialog id="dlgEdit">
+  <form id="editForm">
+    <h3 id="eTitle"></h3>
+    <div class="small muted" id="eCurrent"></div>
+    <div id="eLocked" class="pill warn" style="white-space:normal;margin-top:8px" hidden>วันนี้มีการลงเวลาแล้ว แก้ไขกะของวันนี้ไม่ได้</div>
+    <div class="modes" id="eModes">
+      <div class="mode" id="mClear"><label class="top"><input type="radio" name="mode" value="clear"> กลับไปใช้กะประจำ</label></div>
+      <div class="mode" id="mOff">
+        <label class="top"><input type="radio" name="mode" value="off"> หยุด</label>
+        <div class="body"><label for="eCover">ใครทำงานแทน</label><select id="eCover"></select>
+        <div class="small muted" id="eCoverHint" style="margin-top:4px"></div></div>
+      </div>
+      <div class="mode" id="mWork">
+        <label class="top"><input type="radio" name="mode" value="work"> ทำงาน / เปลี่ยนกะ</label>
+        <div class="body"><label for="eShift">กะที่ทำ</label><select id="eShift"></select></div>
+      </div>
+    </div>
+    <div class="actions"><button type="button" class="btn" id="eCancel">ยกเลิก</button><button class="btn primary" id="eSave">บันทึก</button></div>
+  </form>
+</dialog>
+
+<dialog id="dlgUser">
+  <form id="userForm">
+    <h3 id="uTitle">สมาชิก</h3>
+    <div class="row"><div><label for="uName">ชื่อ-นามสกุล</label><input id="uName" required></div>
+      <div><label for="uUser">ชื่อผู้ใช้ (ใช้ล็อกอิน)</label><input id="uUser" autocapitalize="none" spellcheck="false" required></div></div>
+    <div class="row"><div><label for="uTeam">ทีม</label><select id="uTeam"></select></div>
+      <div><label for="uShift">กะประจำ</label><select id="uShift"></select></div></div>
+    <div class="row"><div><label for="uPhone">เบอร์โทร</label><input id="uPhone"></div><div><label for="uEmail">อีเมล</label><input id="uEmail" type="email"></div></div>
+    <label for="uNote">หมายเหตุ</label><input id="uNote">
+    <label for="uPass" id="uPassLabel">รหัสผ่านเริ่มต้น</label><input id="uPass" type="text" autocomplete="off" spellcheck="false">
+    <div class="small muted" id="uPassHint" style="margin-top:4px">สมาชิกจะถูกบังคับให้ตั้งรหัสผ่านใหม่ตอนล็อกอินครั้งแรก</div>
+    <div class="actions"><button type="button" class="btn" data-close="dlgUser">ยกเลิก</button><button class="btn primary">บันทึก</button></div>
+  </form>
+</dialog>
+
+<dialog id="dlgTeam">
+  <form id="teamForm">
+    <h3 id="tTitle">ทีม</h3>
+    <label for="tName">ชื่อทีม</label><input id="tName" required>
+    <label>วันที่เริ่มกะ</label><div class="days" id="tDays"></div>
+    <label>กะของทีม · เวลา 24 ชั่วโมง (เวลาเลิกน้อยกว่าเวลาเริ่ม = ข้ามเที่ยงคืน เช่น 18:00 ถึง 03:00)</label>
+    <div id="tShifts"></div>
+    <button type="button" class="btn sm" id="tAddShift">+ เพิ่มกะ</button>
+    <div class="actions"><button type="button" class="btn" data-close="dlgTeam">ยกเลิก</button><button class="btn primary">บันทึก</button></div>
+  </form>
+</dialog>
+
+<dialog id="dlgPhoto"><img id="bigPhoto" alt="รูปตอน check-in" style="width:100%;border-radius:10px"><div class="actions"><button class="btn" data-close="dlgPhoto">ปิด</button></div></dialog>
+<dialog id="dlgConfirm"><div id="cText" style="white-space:pre-line"></div><div class="actions"><button class="btn" id="cNo">ยกเลิก</button><button class="btn primary" id="cYes">ยืนยัน</button></div></dialog>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const DAYN = ['จันทร์','อังคาร','พุธ','พฤหัสฯ','ศุกร์','เสาร์','อาทิตย์'];
+const DAYS = ['จ','อ','พ','พฤ','ศ','ส','อา'];
+const pad = n => String(n).padStart(2,'0');
+const isoDate = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parseISO = s => new Date(s + 'T00:00:00');
+const wdOf = d => (d.getDay()+6)%7;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dayLabel = iso => { const d = parseISO(iso); return `${DAYS[wdOf(d)]} ${d.getDate()}/${d.getMonth()+1}`; };
+const dayLabelFull = iso => { const d = parseISO(iso); return `วัน${DAYN[wdOf(d)]}ที่ ${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`; };
+const timeRange = s => s ? `${s.start}–${s.end}${s.overnight ? ' (+1)' : ''}` : '';
+
+let ME = null, TEAMS = [], weekStart = null, serverOffset = 0, lastAlertId = null, pollTimer = null, statusTimer = null, currentTab = null;
+
+/* ---------------- theme ---------------- */
+function effectiveTheme(){
+  const t = document.documentElement.getAttribute('data-theme');
+  return t || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+}
+function applyThemeLabel(){ $$('[data-theme-toggle]').forEach(b => { if (b.id === 'btnTheme') b.textContent = effectiveTheme() === 'dark' ? 'โหมดสว่าง' : 'โหมดมืด'; }); }
+function setTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  try { localStorage.setItem('theme', t); } catch (e) {}
+  applyThemeLabel();
+}
+(function(){ let t = null; try { t = localStorage.getItem('theme'); } catch (e) {} if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t); })();
+$$('[data-theme-toggle]').forEach(b => b.onclick = () => setTheme(effectiveTheme() === 'dark' ? 'light' : 'dark'));
+
+/* ---------------- helpers ---------------- */
+async function api(path, opt = {}) {
+  const r = await fetch(path, {method: opt.method || 'GET', headers: {'Content-Type':'application/json'}, body: opt.body ? JSON.stringify(opt.body) : undefined});
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 401 && !opt.noRedirect) { showLogin(); throw new Error(j.error || 'กรุณาเข้าสู่ระบบ'); }
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+function toast(msg, kind = '', ms = 4500) {
+  const t = document.createElement('div'); t.className = 'toast ' + kind; t.textContent = msg;
+  $('#toasts').appendChild(t); setTimeout(() => t.remove(), ms);
+}
+function beep() {
+  try {
+    const c = new (window.AudioContext || window.webkitAudioContext)();
+    [880, 660].forEach((f, i) => {
+      const o = c.createOscillator(), g = c.createGain();
+      o.frequency.value = f; o.connect(g); g.connect(c.destination);
+      g.gain.setValueAtTime(.15, c.currentTime + i*.18); g.gain.exponentialRampToValueAtTime(.001, c.currentTime + i*.18 + .16);
+      o.start(c.currentTime + i*.18); o.stop(c.currentTime + i*.18 + .17);
+    });
+  } catch (e) {}
+}
+function confirmBox(text) {
+  return new Promise(res => {
+    $('#cText').textContent = text; const d = $('#dlgConfirm'); d.showModal();
+    const done = v => { d.close(); res(v); };
+    $('#cYes').onclick = () => done(true); $('#cNo').onclick = () => done(false);
+  });
+}
+$$('[data-close]').forEach(b => b.onclick = () => $('#' + b.dataset.close).close());
+function tickClock() {
+  const d = new Date(Date.now() + serverOffset);
+  $('#clock').textContent = `${DAYN[wdOf(d)]} ${d.getDate()}/${d.getMonth()+1} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+setInterval(tickClock, 1000);
+const serverNow = () => new Date(Date.now() + serverOffset);
+
+/* ---------------- login / session ---------------- */
+function showLogin() {
+  stopPolling(); clearInterval(statusTimer); stopCam();
+  ME = null; $('#appView').hidden = true; $('#loginView').hidden = false;
+  $('#lPass').value = ''; $('#lErr').style.display = 'none';
+  if ($('#dlgPw').open) $('#dlgPw').close();
+  setTimeout(() => $('#lUser').focus(), 0);
+}
+$('#loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  $('#lBtn').disabled = true; $('#lErr').style.display = 'none';
+  try {
+    await api('/api/login', {method:'POST', body:{username:$('#lUser').value, password:$('#lPass').value}, noRedirect:true});
+    await boot();
+  } catch (err) { $('#lErr').textContent = err.message; $('#lErr').style.display = 'inline-block'; }
+  $('#lBtn').disabled = false;
+});
+$('#btnLogout').onclick = async () => { try { await api('/api/logout', {method:'POST', body:{}, noRedirect:true}); } catch (e) {} showLogin(); };
+
+async function boot() {
+  let me;
+  try { me = await api('/api/me', {noRedirect:true}); } catch (e) { return showLogin(); }
+  ME = me.user; serverOffset = new Date(me.now.replace(' ', 'T')).getTime() - Date.now(); tickClock();
+  $('#loginView').hidden = true; $('#appView').hidden = false;
+  $('#whoName').textContent = ME.name; $('#whoRole').textContent = ME.role === 'admin' ? 'หัวหน้า' : (ME.team_name || 'สมาชิก');
+  applyThemeLabel();
+  const tabs = ME.role === 'admin'
+    ? [['dashboard','แดชบอร์ด'],['schedule','ตารางกะ'],['team','ทีมและสมาชิก'],['history','ประวัติ'],['settings','ตั้งค่า']]
+    : [['checkin','ลงเวลา'],['schedule','ตารางกะ']];
+  $('#nav').innerHTML = tabs.map(([k, l]) => `<button data-tab="${k}">${l}${k === 'dashboard' ? ' <span id="alertBadge" class="badge" hidden>0</span>' : ''}</button>`).join('');
+  $$('#nav button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+  $('#editHint').hidden = ME.role !== 'admin';
+  if (ME.must_change) return openPw(true);
+  TEAMS = (await api('/api/teams')).teams;
+  if (ME.role === 'admin') startPolling();
+  showTab(tabs[0][0]);
+}
+
+/* ---------------- password ---------------- */
+let pwForced = false;
+function openPw(forced) {
+  pwForced = !!forced;
+  $('#pwTitle').textContent = forced ? 'ตั้งรหัสผ่านใหม่' : 'เปลี่ยนรหัสผ่าน';
+  $('#pwHint').textContent = forced ? 'บัญชีนี้ใช้รหัสผ่านเริ่มต้นอยู่ กรุณาตั้งรหัสผ่านใหม่ก่อนเริ่มใช้งาน' : '';
+  $('#pwCancel').hidden = pwForced;
+  ['#pwOld','#pwNew','#pwNew2'].forEach(s => $(s).value = '');
+  $('#dlgPw').showModal();
+}
+$('#dlgPw').addEventListener('cancel', e => { if (pwForced) e.preventDefault(); });
+$('#pwCancel').onclick = () => $('#dlgPw').close();
+$('#btnPw').onclick = () => openPw(false);
+$('#pwForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  if ($('#pwNew').value !== $('#pwNew2').value) return toast('รหัสผ่านใหม่ทั้งสองช่องไม่ตรงกัน', 'err');
+  try {
+    await api('/api/change_password', {method:'POST', body:{old_password:$('#pwOld').value, new_password:$('#pwNew').value}});
+    $('#dlgPw').close(); toast('เปลี่ยนรหัสผ่านแล้ว', 'good');
+    if (pwForced) { pwForced = false; await boot(); }
+  } catch (err) { toast(err.message, 'err'); }
+});
+
+/* ---------------- tabs ---------------- */
+function showTab(name) {
+  currentTab = name;
+  $$('#nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  $$('main > section').forEach(s => s.classList.toggle('active', s.id === 'tab-' + name));
+  clearInterval(statusTimer);
+  if (name === 'checkin') { startCam(); loadStatus(); statusTimer = setInterval(loadStatus, 30000); }
+  if (name === 'schedule') loadSchedule();
+  if (name === 'dashboard') refreshDash();
+  if (name === 'team') loadTeamTab();
+  if (name === 'history') loadHistory();
+  if (name === 'settings') loadSettings();
+}
+
+/* ---------------- camera & check-in ---------------- */
+let stream = null;
+async function startCam() {
+  if (stream) return;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({video:{width:{ideal:640}, height:{ideal:480}, facingMode:'user'}, audio:false});
+    $('#video').srcObject = stream;
+    $('#camMsg').textContent = 'กล้องพร้อมใช้งาน กด Check-in เพื่อถ่ายรูปและลงเวลา';
+  } catch (e) {
+    $('#camMsg').textContent = 'เปิดกล้องไม่ได้: ' + e.message + ' (ต้องเปิดผ่าน http://localhost หรือ https:// เท่านั้น)';
+  }
+}
+function stopCam() { if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; } }
+function snap() {
+  const v = $('#video'); if (!v.videoWidth) return null;
+  const s = Math.min(1, 640 / v.videoWidth), c = document.createElement('canvas');
+  c.width = Math.round(v.videoWidth * s); c.height = Math.round(v.videoHeight * s);
+  const x = c.getContext('2d');
+  x.translate(c.width, 0); x.scale(-1, 1); x.drawImage(v, 0, 0, c.width, c.height); x.setTransform(1,0,0,1,0,0);
+  const d = serverNow();
+  x.fillStyle = 'rgba(0,0,0,.55)'; x.fillRect(0, c.height - 24, c.width, 24);
+  x.fillStyle = '#fff'; x.font = '14px sans-serif';
+  x.fillText(`${ME.name}  ${isoDate(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`, 8, c.height - 7);
+  return c.toDataURL('image/jpeg', 0.8);
+}
+async function loadStatus() {
+  let m; try { m = await api('/api/me'); } catch (e) { return; }
+  const st = m.status || {state:'none'}, box = $('#meBox');
+  const shiftLine = s => `${esc(s.name)} · ${timeRange(s)}`;
+  const nxt = st.next ? `<div class="small muted" style="margin-top:6px">กะถัดไป: ${dayLabel(st.next.day)} ${shiftLine(st.next)}${st.next.cover_for_name ? ' (ทำงานแทน ' + esc(st.next.cover_for_name) + ')' : ''}</div>` : '';
+  let h = '', canIn = false, canOut = false;
+  if (st.state === 'can_checkin') {
+    canIn = true; box.className = 'status-box go';
+    h = `<span class="big">${shiftLine(st.shift)}</span>` +
+        (st.shift.cover_for_name ? `<span class="pill cover">ทำงานแทน ${esc(st.shift.cover_for_name)}</span> ` : '') +
+        (st.late_now > 0 ? `<span class="pill warn">เลยเวลาเริ่มกะมาแล้ว ${st.late_now} นาที</span>` : '<span class="pill ok">พร้อม check-in</span>');
+  } else if (st.state === 'working') {
+    canOut = true; box.className = 'status-box go';
+    h = `<span class="big">กำลังทำงาน · ${shiftLine(st.shift)}</span>เข้างาน ${st.check_in}${st.late_min ? ` <span class="pill warn">สาย ${st.late_min} นาที</span>` : ''}`;
+  } else if (st.state === 'done') {
+    box.className = 'status-box';
+    h = `<span class="big">เลิกงานแล้ว</span>${esc(st.shift_name)} · เข้า ${st.check_in} ออก ${st.check_out}${st.late_min ? ` <span class="pill warn">สาย ${st.late_min} นาที</span>` : ''}${st.early_min ? ` <span class="pill warn">ออกก่อน ${st.early_min} นาที</span>` : ''}`;
+  } else {
+    box.className = 'status-box'; h = '<span class="big">ตอนนี้ไม่มีกะที่ต้อง check-in</span>';
+  }
+  box.innerHTML = h + nxt;
+  $('#btnIn').disabled = !canIn; $('#btnOut').disabled = !canOut;
+}
+async function doAction(kind) {
+  const body = {};
+  if (kind === 'checkin') {
+    body.photo = snap();
+    if (!body.photo) return toast('กล้องยังไม่พร้อม ไม่สามารถถ่ายรูปได้', 'err');
+  }
+  $('#btnIn').disabled = $('#btnOut').disabled = true;
+  try {
+    const r = await api('/api/' + kind, {method:'POST', body});
+    $('#result').innerHTML = `<div class="status-box" style="background:var(--${r.warn ? 'warn' : 'ok'}-bg)">${esc(r.message)}${r.late_min > 0 ? ` (สาย ${r.late_min} นาที)` : ''}${r.early_min > 0 ? ` (ออกก่อน ${r.early_min} นาที)` : ''}</div>` +
+      (body.photo ? `<img class="shot" src="${body.photo}" alt="ภาพที่ถ่าย" style="max-width:260px">` : '');
+    toast(r.message, r.warn ? 'warn' : 'good');
+  } catch (e) { toast(e.message, 'err'); }
+  loadStatus();
+}
+$('#btnIn').onclick = () => doAction('checkin');
+$('#btnOut').onclick = () => doAction('checkout');
+
+/* ---------------- schedule ---------------- */
+function mondayOf(d) { const x = new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate() - wdOf(x)); return x; }
+async function loadSchedule() {
+  if (!weekStart) weekStart = mondayOf(serverNow());
+  const s = await api('/api/schedule?start=' + isoDate(weekStart));
+  const d0 = parseISO(s.days[0]), d6 = parseISO(s.days[6]);
+  $('#weekTitle').textContent = `ตารางกะ ${d0.getDate()}/${d0.getMonth()+1} – ${d6.getDate()}/${d6.getMonth()+1}/${d6.getFullYear()}`;
+  let h = '<tr><th>ชื่อ</th>' + s.days.map((d, i) => `<th class="${d === s.today ? 'today' : ''}">${DAYS[i]} ${+d.slice(8)}</th>`).join('') + '</tr>';
+  let lastTeam = null;
+  for (const r of s.rows) {
+    if (r.team_name !== lastTeam) { h += `<tr class="team"><td colspan="8">${esc(r.team_name)}</td></tr>`; lastTeam = r.team_name; }
+    h += `<tr class="${r.user_id === ME.id ? 'me' : ''}"><td>${esc(r.name)}</td>` + r.cells.map(c => cellHtml(c, r.user_id, s.today)).join('') + '</tr>';
+  }
+  const tbl = $('#schedTable'); tbl.innerHTML = h;
+  const admin = ME.role === 'admin';
+  tbl.classList.toggle('editable', admin);
+  if (admin) tbl.querySelectorAll('[data-uid]').forEach(el => el.onclick = () => openEdit(+el.dataset.uid, el.dataset.day));
+}
+function cellHtml(c, uid, today) {
+  let cls, inner;
+  const sh = c.shift;
+  if (c.on && sh) {
+    if (c.override === 'work' && c.cover_for_name) { cls = 'cov'; inner = `<b>${esc(sh.name)}</b><span class="t">${timeRange(sh)}</span><span class="rep">แทน ${esc(c.cover_for_name)}</span>`; }
+    else if (c.override === 'work') { cls = 'extra'; inner = `<b>${esc(sh.name)}</b><span class="t">${timeRange(sh)}</span><span>เพิ่ม/เปลี่ยนกะ</span>`; }
+    else { cls = 'on'; inner = `<b>${esc(sh.name)}</b><span class="t">${timeRange(sh)}</span>`; }
+    if (c.check_in) inner += `<span class="att ${c.late_min > 0 ? 'late' : 'ok'}">✓ ${c.check_in}${c.check_out ? '–' + c.check_out : ''}</span>`;
+    else if (c.status === 'missing' || c.status === 'absent') inner += `<span class="att miss">${c.status === 'absent' ? 'ไม่ได้เข้า' : 'ยังไม่เข้า'}</span>`;
+  } else if (c.override === 'off') {
+    cls = 'ovoff';
+    inner = `<b>หยุด</b>` + (sh ? `<s class="t">${esc(sh.name)} ${timeRange(sh)}</s>` : '') +
+      (c.cover_name ? `<span class="rep">แทนโดย ${esc(c.cover_name)}</span>` : '<span class="nocover">ยังไม่มีคนแทน</span>');
+  } else { cls = 'off'; inner = '—'; }
+  return `<td><div class="cell ${cls}" data-uid="${uid}" data-day="${c.day}">${inner}</div></td>`;
+}
+$('#wPrev').onclick = () => { weekStart.setDate(weekStart.getDate() - 7); loadSchedule(); };
+$('#wNext').onclick = () => { weekStart.setDate(weekStart.getDate() + 7); loadSchedule(); };
+$('#wNow').onclick = () => { weekStart = mondayOf(serverNow()); loadSchedule(); };
+
+/* ---------------- edit shift dialog ---------------- */
+let EDIT = null;
+function setMode(m) {
+  $$('input[name=mode]').forEach(r => r.checked = r.value === m);
+  ['clear','off','work'].forEach(k => $('#m' + k[0].toUpperCase() + k.slice(1)).classList.toggle('sel', k === m));
+  $('#mOff .body').hidden = m !== 'off'; $('#mWork .body').hidden = m !== 'work';
+}
+async function openEdit(uid, day) {
+  let s;
+  try { s = await api('/api/schedule?start=' + day); } catch (e) { return toast(e.message, 'err'); }
+  const row = s.rows.find(r => r.user_id === uid), c = row.cells[s.days.indexOf(day)];
+  EDIT = {uid, day, c};
+  $('#eTitle').textContent = `${row.name} · ${dayLabelFull(day)}`;
+  let cur;
+  if (c.override === 'off') cur = `ตอนนี้: หยุด${c.cover_name ? ' (แทนโดย ' + c.cover_name + ')' : ' (ยังไม่มีคนแทน)'}`;
+  else if (c.override === 'work') cur = `ตอนนี้: ${c.shift.name} ${timeRange(c.shift)}${c.cover_for_name ? ' (ทำงานแทน ' + c.cover_for_name + ')' : ' (เพิ่ม/เปลี่ยนกะ)'}`;
+  else cur = c.on ? `ตอนนี้: ${c.shift.name} ${timeRange(c.shift)} (กะประจำ)` : 'ตอนนี้: ไม่มีกะ';
+  $('#eCurrent').textContent = cur;
+  const locked = !!c.check_in;
+  $('#eLocked').hidden = !locked; $('#eModes').hidden = locked; $('#eSave').disabled = locked;
+  // shift list
+  $('#eShift').innerHTML = TEAMS.map(t => `<optgroup label="${esc(t.name)}">` + t.shifts.map(sh => `<option value="${sh.id}">${esc(sh.name)} ${sh.start_time}–${sh.end_time}</option>`).join('') + '</optgroup>').join('');
+  if (c.shift) $('#eShift').value = c.shift.id;
+  $('#mClear').hidden = !c.override;
+  const canOff = c.base;
+  $('#mOff').classList.toggle('dis', !canOff); $('#mOff').hidden = !canOff;
+  setMode(c.override === 'off' ? 'off' : c.override === 'work' ? 'work' : canOff ? 'off' : 'work');
+  // cover candidates
+  $('#eCover').innerHTML = '<option value="">ยังไม่ระบุคนแทน</option>'; $('#eCoverHint').textContent = '';
+  if (canOff && c.shift) {
+    try {
+      const o = await api(`/api/admin/cover_options?user_id=${uid}&day=${day}`);
+      $('#eCover').innerHTML = '<option value="">ยังไม่ระบุคนแทน</option>' +
+        o.candidates.map(x => `<option value="${x.id}">${esc(x.name)} (${esc(x.team_name)})</option>`).join('') +
+        (o.blocked.length ? '<optgroup label="ทำงานแทนไม่ได้">' + o.blocked.map(x => `<option value="${x.id}" disabled>${esc(x.name)} — ${esc(x.reason)}</option>`).join('') + '</optgroup>' : '');
+      $('#eCover').value = c.cover_user_id || '';
+      $('#eCoverHint').textContent = `กะที่ต้องหาคนแทน: ${o.shift.name} ${timeRange(o.shift)}`;
+    } catch (e) { toast(e.message, 'err'); }
+  }
+  $('#dlgEdit').showModal();
+}
+$$('input[name=mode]').forEach(r => r.onchange = () => setMode(r.value));
+$('#eCancel').onclick = () => $('#dlgEdit').close();
+$('#editForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const mode = $('input[name=mode]:checked').value;
+  const body = {user_id: EDIT.uid, day: EDIT.day, action: mode};
+  if (mode === 'off') body.cover_user_id = $('#eCover').value || null;
+  if (mode === 'work') body.shift_id = +$('#eShift').value;
+  try {
+    await api('/api/admin/override', {method:'POST', body});
+    $('#dlgEdit').close(); toast('บันทึกแล้ว', 'good');
+    if (currentTab === 'dashboard') refreshDash(); else loadSchedule();
+  } catch (err) { toast(err.message, 'err'); }
+});
+
+/* ---------------- dashboard ---------------- */
+const STAT = {working:['กำลังทำงาน','ok'], done:['เลิกงานแล้ว','blue'], waiting:['รอถึงเวลา','off'], missing:['ยังไม่ check-in','bad'], absent:['ไม่ได้เข้างาน','bad'], off:['ไม่มีกะ','off']};
+async function refreshDash() {
+  if (!ME || ME.role !== 'admin') return;
+  let t, a;
+  try { [t, a] = await Promise.all([api('/api/admin/today'), api('/api/admin/alerts')]); } catch (e) { return; }
+  const items = t.items, cnt = k => items.filter(i => i.status === k).length;
+  $('#todayStr').textContent = t.today;
+  $('#stats').innerHTML = [
+    ['กะที่ต้องดูแลตอนนี้', items.length, ''], ['กำลังทำงาน', cnt('working'), 'var(--ok)'], ['เลิกงานแล้ว', cnt('done'), 'var(--brand-text)'],
+    ['มาสาย', items.filter(i => i.late_min > 0 && i.check_in).length, 'var(--warn)'], ['ยังไม่เข้างาน', cnt('missing') + cnt('absent'), 'var(--bad)']
+  ].map(([l, v, c]) => `<div class="stat"><b style="color:${c || 'inherit'}">${v}</b><span>${l}</span></div>`).join('');
+  $('#todayTable').innerHTML = '<tr><th>ชื่อ</th><th>ทีม</th><th>กะ</th><th>เข้า</th><th>ออก</th><th>สถานะ</th></tr>' +
+    (items.map(i => { const [l, k] = STAT[i.status] || STAT.off;
+      return `<tr><td>${esc(i.name)}${i.cover_for_name ? `<br><span class="pill cover">แทน ${esc(i.cover_for_name)}</span>` : ''}</td><td>${esc(i.team_name)}</td>
+      <td class="num">${esc(i.shift ? i.shift.name : '')}<br><span class="muted small">${timeRange(i.shift)}</span></td>
+      <td class="num">${i.check_in || '-'}${i.late_min > 0 ? ` <span class="pill warn">+${i.late_min}m</span>` : ''}</td>
+      <td class="num">${i.check_out || '-'}${i.early_min > 0 ? ` <span class="pill warn">-${i.early_min}m</span>` : ''}</td>
+      <td><span class="pill ${k}">${l}</span></td></tr>`; }).join('') || '<tr><td colspan="6" class="muted">ตอนนี้ไม่มีกะที่ต้องดูแล</td></tr>');
+  $('#uncovered').innerHTML = t.uncovered.length ? `<div class="uncov"><h3>หยุดแล้วยังไม่มีคนทำงานแทน (${t.uncovered.length})</h3>` +
+    t.uncovered.map(u => `<div class="item"><span>${esc(u.name)} · ${dayLabel(u.day)} · ${esc(u.shift ? u.shift.name + ' ' + timeRange(u.shift) : '')}</span><button class="btn sm" data-fix="${u.user_id}|${u.day}">เลือกคนแทน</button></div>`).join('') + '</div>' : '';
+  $$('[data-fix]').forEach(b => b.onclick = () => { const [u, d] = b.dataset.fix.split('|'); openEdit(+u, d); });
+  const ICON = {late:'สาย', early:'ออกก่อน', noshow:'ไม่มา'};
+  $('#alerts').innerHTML = a.alerts.slice(0, 30).map(x => `<div class="alert ${x.is_read ? '' : 'unread'}"><span class="pill ${x.kind === 'noshow' ? 'bad' : 'warn'}">${ICON[x.kind] || '!'}</span><div>${esc(x.message)}<small>${esc(x.created_at)}</small></div></div>`).join('') || '<div class="muted">ยังไม่มีการแจ้งเตือน</div>';
+  const b = $('#alertBadge'); if (b) { b.hidden = !a.unread; b.textContent = a.unread; }
+  const maxId = a.alerts.reduce((m, x) => Math.max(m, x.id), 0);
+  if (lastAlertId !== null) a.alerts.filter(x => x.id > lastAlertId && !x.is_read).reverse().forEach(x => {
+    toast(x.message, 'warn', 12000); beep();
+    if ('Notification' in window && Notification.permission === 'granted') new Notification('Shift Check-in', {body: x.message});
+  });
+  lastAlertId = maxId;
+}
+$('#btnReadAll').onclick = async () => { await api('/api/admin/alerts/read', {method:'POST', body:{}}); refreshDash(); };
+function startPolling() {
+  if (pollTimer) return;
+  if ('Notification' in window && Notification.permission === 'default') try { Notification.requestPermission(); } catch (e) {}
+  pollTimer = setInterval(() => { if (ME && ME.role === 'admin') refreshDash(); }, 10000);
+}
+function stopPolling() { clearInterval(pollTimer); pollTimer = null; lastAlertId = null; }
+
+/* ---------------- team & users ---------------- */
+let USERS = [];
+async function loadTeamTab() {
+  const r = await api('/api/admin/users'); USERS = r.users; TEAMS = r.teams;
+  const shiftOf = id => { for (const t of TEAMS) for (const s of t.shifts) if (s.id === id) return s; return null; };
+  $('#teamTable').innerHTML = '<tr><th>ทีม</th><th>วันที่เริ่มกะ</th><th>กะ</th><th>สมาชิก</th><th></th></tr>' +
+    TEAMS.map(t => `<tr><td><b>${esc(t.name)}</b></td><td>${t.days.split(',').map(d => DAYS[+d]).join(' ')}</td>
+      <td class="num">${t.shifts.map(s => `${esc(s.name)} ${s.start_time}–${s.end_time}${s.end_time <= s.start_time ? ' (+1)' : ''}`).join('<br>')}</td>
+      <td>${t.member_count} คน</td><td style="text-align:right;white-space:nowrap"><button class="btn sm" data-et="${t.id}">แก้ไข</button> <button class="btn sm danger" data-dt="${t.id}">ลบ</button></td></tr>`).join('');
+  $('#userTable').innerHTML = '<tr><th>ชื่อ</th><th>ชื่อผู้ใช้</th><th>ทีม</th><th>กะประจำ</th><th>ติดต่อ</th><th></th></tr>' +
+    USERS.map(m => { const sh = shiftOf(m.shift_id), t = TEAMS.find(x => x.id === m.team_id);
+      return `<tr><td><b>${esc(m.name)}</b>${m.note ? `<br><span class="muted small">${esc(m.note)}</span>` : ''}</td><td class="num">${esc(m.username)}${m.must_change ? ' <span class="pill warn">รอตั้งรหัสใหม่</span>' : ''}</td>
+      <td>${esc(t ? t.name : '—')}</td><td class="num">${sh ? esc(sh.name) + '<br><span class="muted small">' + sh.start_time + '–' + sh.end_time + '</span>' : '—'}</td>
+      <td class="small">${esc(m.phone)}<br>${esc(m.email)}</td>
+      <td style="text-align:right;white-space:nowrap"><button class="btn sm" data-eu="${m.id}">แก้ไข</button> <button class="btn sm danger" data-du="${m.id}">ลบ</button></td></tr>`; }).join('');
+  $$('[data-et]').forEach(b => b.onclick = () => openTeam(TEAMS.find(t => t.id === +b.dataset.et)));
+  $$('[data-eu]').forEach(b => b.onclick = () => openUser(USERS.find(m => m.id === +b.dataset.eu)));
+  $$('[data-du]').forEach(b => b.onclick = async () => {
+    const m = USERS.find(x => x.id === +b.dataset.du);
+    if (!await confirmBox(`ลบบัญชี "${m.name}" ออกจากระบบ?\nประวัติการเข้างานเดิมยังเก็บไว้`)) return;
+    try { await api('/api/admin/users/' + m.id, {method:'DELETE'}); toast('ลบแล้ว', 'good'); loadTeamTab(); } catch (e) { toast(e.message, 'err'); }
+  });
+  $$('[data-dt]').forEach(b => b.onclick = async () => {
+    const t = TEAMS.find(x => x.id === +b.dataset.dt);
+    if (!await confirmBox(`ลบทีม "${t.name}" และกะทั้งหมดของทีม?\nสมาชิก ${t.member_count} คนจะถูกย้ายไปเป็น "ไม่มีทีม"`)) return;
+    try { await api('/api/admin/teams/' + t.id, {method:'DELETE'}); toast('ลบแล้ว', 'good'); loadTeamTab(); } catch (e) { toast(e.message, 'err'); }
+  });
+}
+let editUserId = null;
+function fillShiftSelect(teamId, sel) {
+  const t = TEAMS.find(x => x.id === +teamId);
+  $('#uShift').innerHTML = '<option value="">— ไม่มีกะประจำ —</option>' + (t ? t.shifts.map(s => `<option value="${s.id}">${esc(s.name)} ${s.start_time}–${s.end_time}</option>`).join('') : '');
+  $('#uShift').value = sel || '';
+}
+function openUser(m) {
+  editUserId = m ? m.id : null;
+  $('#uTitle').textContent = m ? 'แก้ไขสมาชิก' : 'เพิ่มสมาชิก';
+  $('#uTeam').innerHTML = '<option value="">ไม่มีทีม</option>' + TEAMS.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
+  $('#uName').value = m?.name || ''; $('#uUser').value = m?.username || ''; $('#uTeam').value = m?.team_id ?? '';
+  fillShiftSelect(m?.team_id, m?.shift_id);
+  $('#uPhone').value = m?.phone || ''; $('#uEmail').value = m?.email || ''; $('#uNote').value = m?.note || ''; $('#uPass').value = '';
+  $('#uPassLabel').textContent = m ? 'ตั้งรหัสผ่านใหม่ให้ (เว้นว่าง = ไม่เปลี่ยน)' : 'รหัสผ่านเริ่มต้น';
+  $('#uPass').required = !m;
+  $('#uPassHint').textContent = 'สมาชิกจะถูกบังคับให้ตั้งรหัสผ่านใหม่ตอนล็อกอินครั้งถัดไป (อย่างน้อย 8 ตัวอักษร)';
+  $('#dlgUser').showModal();
+}
+$('#uTeam').onchange = () => fillShiftSelect($('#uTeam').value, '');
+$('#btnAddUser').onclick = () => openUser(null);
+$('#userForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const body = {name:$('#uName').value, username:$('#uUser').value, team_id:$('#uTeam').value || null, shift_id:$('#uShift').value || null,
+    phone:$('#uPhone').value, email:$('#uEmail').value, note:$('#uNote').value, password:$('#uPass').value};
+  try {
+    await api(editUserId ? '/api/admin/users/' + editUserId : '/api/admin/users', {method: editUserId ? 'PUT' : 'POST', body});
+    $('#dlgUser').close(); toast('บันทึกแล้ว', 'good'); loadTeamTab();
+  } catch (err) { toast(err.message, 'err'); }
+});
+let editTeamId = null;
+function shiftRow(s = {}) {
+  const d = document.createElement('div'); d.className = 'shiftrow'; d.dataset.id = s.id || '';
+  d.innerHTML = `<input class="sn" placeholder="ชื่อกะ" value="${esc(s.name || '')}" aria-label="ชื่อกะ" required><input class="ss" inputmode="numeric" maxlength="5" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" placeholder="HH:MM" title="เวลา 24 ชั่วโมง เช่น 08:30" value="${s.start_time || '09:00'}" aria-label="เวลาเริ่ม (24 ชั่วโมง)" required><input class="se" inputmode="numeric" maxlength="5" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" placeholder="HH:MM" title="เวลา 24 ชั่วโมง เช่น 17:30" value="${s.end_time || '18:00'}" aria-label="เวลาเลิก (24 ชั่วโมง)" required><button type="button" class="btn sm danger" aria-label="ลบกะ">ลบ</button>`;
+  d.querySelector('button').onclick = () => d.remove();
+  return d;
+}
+function openTeam(t) {
+  editTeamId = t ? t.id : null;
+  $('#tTitle').textContent = t ? 'แก้ไขทีม' : 'เพิ่มทีม';
+  $('#tName').value = t?.name || '';
+  const sel = t ? t.days.split(',') : ['0','1','2','3','4'];
+  $('#tDays').innerHTML = DAYN.map((n, i) => `<label><input type="checkbox" value="${i}" ${sel.includes(String(i)) ? 'checked' : ''}>${n}</label>`).join('');
+  $('#tShifts').innerHTML = ''; (t ? t.shifts : [{}]).forEach(s => $('#tShifts').appendChild(shiftRow(s)));
+  $('#dlgTeam').showModal();
+}
+$('#tAddShift').onclick = () => $('#tShifts').appendChild(shiftRow({name: 'กะ ' + ($$('#tShifts .shiftrow').length + 1)}));
+$('#btnAddTeam').onclick = () => openTeam(null);
+$('#teamForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const shifts = $$('#tShifts .shiftrow').map(r => ({id: r.dataset.id ? +r.dataset.id : null, name: r.querySelector('.sn').value, start_time: r.querySelector('.ss').value, end_time: r.querySelector('.se').value}));
+  const body = {name:$('#tName').value, days:$$('#tDays input:checked').map(i => +i.value), shifts};
+  try {
+    await api(editTeamId ? '/api/admin/teams/' + editTeamId : '/api/admin/teams', {method: editTeamId ? 'PUT' : 'POST', body});
+    $('#dlgTeam').close(); toast('บันทึกแล้ว', 'good'); loadTeamTab();
+  } catch (err) { toast(err.message, 'err'); }
+});
+
+/* ---------------- history ---------------- */
+async function loadHistory() {
+  if (!$('#hFrom').value) { const n = serverNow(), f = new Date(n); f.setDate(f.getDate() - 7); $('#hFrom').value = isoDate(f); $('#hTo').value = isoDate(n); }
+  const r = await api(`/api/admin/attendance?from=${$('#hFrom').value}&to=${$('#hTo').value}`);
+  $('#histTable').innerHTML = '<tr><th>วันที่</th><th>ชื่อ</th><th>กะ</th><th>รูป</th><th>เข้า</th><th>ออก</th><th>สาย</th><th>ออกก่อน</th></tr>' +
+    (r.rows.map(x => `<tr class="num"><td>${x.day}</td><td>${esc(x.user_name)}</td><td>${esc(x.shift_name || '')}<br><span class="muted small">${(x.shift_start || '').slice(11, 16)}–${(x.shift_end || '').slice(11, 16)}</span></td>
+      <td>${x.check_in_photo ? `<img class="thumb" data-ph="${esc(x.check_in_photo)}" alt="รูป" src="/photos/${encodeURIComponent(x.check_in_photo)}">` : ''}</td>
+      <td>${(x.check_in || '').slice(5, 16) || '-'}</td><td>${(x.check_out || '').slice(5, 16) || '-'}</td>
+      <td>${x.late_min > 0 ? `<span class="pill warn">${x.late_min} นาที</span>` : '-'}</td>
+      <td>${x.early_min > 0 ? `<span class="pill warn">${x.early_min} นาที</span>` : '-'}</td></tr>`).join('') || '<tr><td colspan="8" class="muted">ไม่มีข้อมูลในช่วงวันที่นี้</td></tr>');
+  $$('.thumb').forEach(i => i.onclick = () => { $('#bigPhoto').src = i.src; $('#dlgPhoto').showModal(); });
+}
+$('#hGo').onclick = loadHistory;
+
+/* ---------------- settings ---------------- */
+async function loadSettings() {
+  const s = await api('/api/admin/settings');
+  $('#sLate').value = s.late_min; $('#sEarly').value = s.early_min; $('#sNoshow').value = s.noshow_min; $('#sOpen').value = s.checkin_open_min;
+}
+$('#sSave').onclick = async () => {
+  try {
+    await api('/api/admin/settings', {method:'PUT', body:{late_min:$('#sLate').value, early_min:$('#sEarly').value, noshow_min:$('#sNoshow').value, checkin_open_min:$('#sOpen').value}});
+    toast('บันทึกการตั้งค่าแล้ว', 'good');
+  } catch (e) { toast(e.message, 'err'); }
+};
+
+/* ---------------- init ---------------- */
+applyThemeLabel();
+boot();
+</script>
+</body>
+</html>
