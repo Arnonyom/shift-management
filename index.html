@@ -1,0 +1,1142 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shift Check-in</title>
+<style>
+/* เลย์เอาต์: แถบหัวสีขาว มีเส้นเขียวไลม์ด้านบน, เนื้อหาเป็นการ์ดบนพื้นเขียวอ่อน | ธีมเขียว-ขาว (โทนไลม์กรีน) | สลับสว่าง/มืดได้ */
+:root{
+  --bg:#f2f7ea; --card:#ffffff; --ink:#18240f; --muted:#59694b; --line:#d9e4cb;
+  --brand:#4a8a0d; --brand-ink:#ffffff; --lime:#a6ce39; --brand-soft:#e5f2cc; --brand-text:#3a6f08;
+  --ok:#2f7d17; --ok-bg:#e1f3d3; --warn:#9c5700; --warn-bg:#fff0d0; --bad:#c0262d; --bad-bg:#fde5e5;
+  --off-bg:#edf1e6; --cover:#14668f; --cover-bg:#dff0fa; --shadow:0 1px 2px rgba(24,36,15,.06);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1409; --card:#162011; --ink:#e7f0dc; --muted:#98a98a; --line:#27341f;
+    --brand:#a6ce39; --brand-ink:#14200a; --lime:#a6ce39; --brand-soft:#223214; --brand-text:#c4e56a;
+    --ok:#8fd45a; --ok-bg:#1b3313; --warn:#f0b045; --warn-bg:#3a2a0c; --bad:#ff8f8f; --bad-bg:#3c1818;
+    --off-bg:#1c2718; --cover:#7cc7ee; --cover-bg:#12303f; --shadow:none; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1409; --card:#162011; --ink:#e7f0dc; --muted:#98a98a; --line:#27341f;
+  --brand:#a6ce39; --brand-ink:#14200a; --lime:#a6ce39; --brand-soft:#223214; --brand-text:#c4e56a;
+  --ok:#8fd45a; --ok-bg:#1b3313; --warn:#f0b045; --warn-bg:#3a2a0c; --bad:#ff8f8f; --bad-bg:#3c1818;
+  --off-bg:#1c2718; --cover:#7cc7ee; --cover-bg:#12303f; --shadow:none; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI","Noto Sans Thai",Sarabun,Tahoma,-apple-system,sans-serif}
+[hidden]{display:none!important}
+header{background:var(--card);border-bottom:1px solid var(--line);border-top:4px solid var(--lime);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--card)}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-block:8px}
+.logo{display:flex;align-items:center;gap:9px;font-weight:700;font-size:17px;letter-spacing:.01em}
+.mark{width:26px;height:26px;border-radius:50%;background:var(--lime);display:grid;place-items:center;flex:none}
+.mark::after{content:"";width:11px;height:11px;border-radius:50%;border:3px solid #18240f;border-top-color:transparent;box-sizing:border-box;transform:rotate(30deg)}
+.right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.who{font-size:14px;display:flex;align-items:center;gap:6px}
+.clock{color:var(--muted);font-variant-numeric:tabular-nums;font-size:13px}
+nav{display:flex;gap:2px;flex-wrap:wrap}
+nav button{border:0;background:none;color:var(--muted);padding:9px 14px;font:inherit;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
+nav button:hover{color:var(--ink)}
+nav button.active{color:var(--brand-text);font-weight:600;border-bottom-color:var(--brand)}
+.badge{background:var(--bad);color:#fff;border-radius:99px;font-size:11px;padding:1px 6px;margin-left:4px}
+main{padding-block:16px 48px}
+section.tab{display:none}
+section.tab.active{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:var(--shadow)}
+h2{margin:0 0 12px;font-size:18px;text-wrap:balance}
+h3{margin:0 0 6px;font-size:15px}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+input,select,textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;min-width:0}
+input[type=checkbox],input[type=radio]{width:auto;accent-color:var(--brand)}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:8px;font:inherit;cursor:pointer}
+.btn:hover{background:var(--off-bg)}
+.btn.sm{padding:5px 10px;font-size:13px}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--brand-ink);font-weight:600}
+.btn.primary:hover{filter:brightness(1.08);background:var(--brand)}
+.btn.outline{border-color:var(--brand);color:var(--brand-text);font-weight:600}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.row>*{flex:1;min-width:min(200px,100%)}
+.head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.head h2{margin:0}
+.grid2{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px}
+@media(max-width:820px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.status-box{padding:14px 16px;border-radius:10px;background:var(--off-bg);margin:6px 0 14px}
+.status-box.go{background:var(--brand-soft)}
+.status-box .big{font-size:22px;font-weight:700;display:block;line-height:1.3;margin-bottom:4px}
+.pill{display:inline-block;padding:1px 9px;border-radius:99px;font-size:12px;font-weight:600;white-space:nowrap}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}
+.pill.warn{background:var(--warn-bg);color:var(--warn)}
+.pill.bad{background:var(--bad-bg);color:var(--bad)}
+.pill.off{background:var(--off-bg);color:var(--muted)}
+.pill.blue{background:var(--brand-soft);color:var(--brand-text)}
+.pill.cover{background:var(--cover-bg);color:var(--cover)}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.04em}
+.scroll{overflow-x:auto;max-width:100%}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+.sched{min-width:900px}
+.sched th,.sched td{text-align:center;padding:5px 4px;min-width:112px;vertical-align:top}
+.sched td:first-child,.sched th:first-child{text-align:left;min-width:140px;position:sticky;left:0;background:var(--card);z-index:1;padding-left:10px;vertical-align:middle}
+.sched tr.team td{background:var(--off-bg);font-weight:700;text-align:left;font-size:13px;color:var(--brand-text);padding-left:10px}
+.sched tr.me td:first-child{box-shadow:inset 3px 0 0 var(--brand);font-weight:600}
+.sched th.today{color:var(--brand-text);background:var(--brand-soft)}
+.cell{border-radius:8px;padding:5px 6px;font-size:12px;line-height:1.35;min-height:48px;display:flex;flex-direction:column;justify-content:center;gap:1px;text-align:center}
+.cell b{font-weight:600;font-size:12.5px}
+.cell .t{font-variant-numeric:tabular-nums}
+.cell.on{background:var(--brand-soft);color:var(--brand-text)}
+.cell.off{color:var(--muted);min-height:0;padding-block:12px}
+.cell.ovoff{background:repeating-linear-gradient(135deg,var(--off-bg),var(--off-bg) 7px,transparent 7px,transparent 14px);border:1px dashed var(--line);color:var(--muted)}
+.cell.ovoff s{opacity:.7}
+.cell.cov{background:var(--cover-bg);color:var(--cover)}
+.cell.extra{background:var(--warn-bg);color:var(--warn)}
+.cell .rep{font-weight:700;color:var(--cover)}
+.cell .nocover{font-weight:700;color:var(--bad)}
+.cell .att{font-size:11px;margin-top:2px}
+.cell .att.late{color:var(--warn)} .cell .att.ok{color:var(--ok)} .cell .att.miss{color:var(--bad);font-weight:600}
+.editable .cell{cursor:pointer}
+.editable .cell:hover{outline:2px solid var(--brand)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow)}
+.stat b{display:block;font-size:26px;line-height:1.2;font-variant-numeric:tabular-nums}
+.stat span{color:var(--muted);font-size:13px}
+.alert{display:flex;gap:10px;padding:9px 12px;border-radius:8px;margin-bottom:8px;background:var(--off-bg);align-items:flex-start;min-width:0}
+.alert.unread{background:var(--warn-bg)}
+.alert div{min-width:0;overflow-wrap:anywhere}
+.alert small{color:var(--muted);display:block}
+.uncov{background:var(--bad-bg);border:1px solid var(--bad);border-radius:10px;padding:10px 12px;margin-bottom:16px}
+.uncov h3{color:var(--bad)}
+.uncov .item{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:4px 0}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);padding:20px;max-width:520px;width:calc(100% - 24px);max-height:92vh;overflow:auto}
+dialog::backdrop{background:rgba(8,14,4,.55)}
+.days{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.days label{display:flex;align-items:center;gap:4px;margin:0;color:var(--ink);padding:6px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;cursor:pointer}
+.actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+.toasts{position:fixed;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;z-index:50;max-width:min(380px,calc(100vw - 28px))}
+.toast{background:var(--ink);color:var(--bg);padding:11px 14px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.25);font-size:14px;overflow-wrap:anywhere}
+.toast.err{background:var(--bad);color:#fff}.toast.warn{background:var(--warn);color:#fff}.toast.good{background:var(--brand);color:var(--brand-ink)}
+.muted{color:var(--muted)} .small{font-size:13px}
+.legend{display:flex;gap:8px 14px;flex-wrap:wrap;margin:10px 0 0;font-size:12px;color:var(--muted);align-items:center}
+.login-wrap{min-height:calc(100vh - 8px);display:grid;place-items:center;padding-block:24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.login-card{width:min(420px,100%);margin:0}
+.login-card .logo{font-size:20px;margin-bottom:10px}
+.tabs2{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:6px}
+.tabs2 button{border:0;background:var(--bg);color:var(--muted);padding:9px;font:inherit;cursor:pointer}
+.tabs2 button.active{background:var(--brand-soft);color:var(--brand-text);font-weight:600}
+.modes{display:grid;gap:8px;margin-top:8px}
+.mode{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.mode.sel{border-color:var(--brand);background:var(--brand-soft)}
+.mode>label.top{display:flex;gap:8px;align-items:center;margin:0;color:var(--ink);font-size:15px;font-weight:600;cursor:pointer}
+.mode .body{margin-top:6px}
+.mode.dis{opacity:.5}
+.shiftrow{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) auto;gap:6px;margin-bottom:6px;align-items:center}
+@media(max-width:480px){.shiftrow{grid-template-columns:1fr 1fr}.shiftrow input:first-child{grid-column:1/-1}}
+.invite{font-size:26px;font-weight:700;letter-spacing:.08em;text-align:center;padding:14px;border:2px dashed var(--brand);border-radius:12px;background:var(--brand-soft);color:var(--brand-text);user-select:all;overflow-wrap:anywhere}
+.code{font-size:13px;user-select:all}
+@media (prefers-reduced-motion:no-preference){.toast{animation:in .18s ease-out}@keyframes in{from{transform:translateY(8px);opacity:0}}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+</head>
+<body>
+
+<!-- ================= SETUP (ยังไม่ได้ตั้งค่า config.js) ================= -->
+<div id="setupView" class="login-wrap" hidden>
+  <div class="card login-card">
+    <div class="logo"><span class="mark"></span>Shift Check-in</div>
+    <h3>ยังไม่ได้ตั้งค่าการเชื่อมต่อ</h3>
+    <p class="small muted" id="setupMsg" style="margin:0">เปิดไฟล์ config.js แล้วใส่ SUPABASE_URL และ SUPABASE_ANON_KEY ของโปรเจกต์ Supabase ของคุณ (ดูขั้นตอนที่ 4 ใน README)</p>
+  </div>
+</div>
+
+<!-- ================= LOGIN / REGISTER ================= -->
+<div id="loginView" class="login-wrap" hidden>
+  <div class="card login-card">
+    <div class="logo"><span class="mark"></span>Shift Check-in</div>
+    <div class="tabs2" role="tablist">
+      <button type="button" id="tabLogin" class="active" role="tab">เข้าสู่ระบบ</button>
+      <button type="button" id="tabReg" role="tab">ลงทะเบียนครั้งแรก</button>
+    </div>
+    <form id="loginForm" autocomplete="on">
+      <label for="lUser">ชื่อผู้ใช้</label>
+      <input id="lUser" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+      <label for="lPass">รหัสผ่าน</label>
+      <input id="lPass" name="password" type="password" autocomplete="current-password" required>
+      <button class="btn primary" style="width:100%;margin-top:16px;padding:10px" id="lBtn">เข้าสู่ระบบ</button>
+    </form>
+    <form id="regForm" autocomplete="off" hidden>
+      <p class="small muted" style="margin:6px 0 0">ใช้ชื่อผู้ใช้และรหัสเชิญที่หัวหน้าให้ แล้วตั้งรหัสผ่านของคุณเอง (รหัสเชิญใช้ได้ครั้งเดียว)</p>
+      <label for="rUser">ชื่อผู้ใช้</label>
+      <input id="rUser" autocapitalize="none" spellcheck="false" required>
+      <label for="rCode">รหัสเชิญ</label>
+      <input id="rCode" class="mono" autocapitalize="none" spellcheck="false" autocomplete="off" required>
+      <label for="rPass">ตั้งรหัสผ่าน (อย่างน้อย 8 ตัวอักษร)</label>
+      <input id="rPass" type="password" autocomplete="new-password" minlength="8" required>
+      <label for="rPass2">ยืนยันรหัสผ่าน</label>
+      <input id="rPass2" type="password" autocomplete="new-password" minlength="8" required>
+      <button class="btn primary" style="width:100%;margin-top:16px;padding:10px" id="rBtn">ลงทะเบียน</button>
+    </form>
+    <div id="lErr" class="pill bad" style="margin-top:12px;display:none;white-space:normal"></div>
+    <p class="muted small" style="margin:14px 0 0">ลืมรหัสผ่าน? แจ้งหัวหน้าเพื่อรีเซ็ตบัญชี แล้วลงทะเบียนใหม่ด้วยรหัสเชิญใหม่</p>
+    <div style="margin-top:10px;text-align:right"><button type="button" class="btn sm" data-theme-toggle>สลับโหมดสว่าง/มืด</button></div>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="appView" hidden>
+<header>
+  <div class="wrap">
+    <div class="bar">
+      <span class="logo"><span class="mark"></span>Shift Check-in</span>
+      <div class="right">
+        <span class="clock" id="clock"></span>
+        <span class="who"><b id="whoName"></b><span class="pill blue" id="whoRole"></span></span>
+        <button class="btn sm" id="btnTheme" data-theme-toggle title="สลับโหมดสว่าง/มืด" aria-label="สลับโหมดสว่างหรือมืด"></button>
+        <button class="btn sm" id="btnPw">เปลี่ยนรหัสผ่าน</button>
+        <button class="btn sm" id="btnLogout">ออกจากระบบ</button>
+      </div>
+    </div>
+    <nav id="nav" aria-label="เมนู"></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- CHECK-IN -->
+  <section class="tab" id="tab-checkin">
+    <div class="card" style="max-width:640px">
+      <h2>ลงเวลาทำงาน</h2>
+      <div class="status-box" id="meBox">กำลังโหลด…</div>
+      <div class="row">
+        <button class="btn primary" id="btnIn" style="padding:14px;font-size:16px">Check-in</button>
+        <button class="btn outline" id="btnOut" style="padding:14px;font-size:16px">Check-out</button>
+      </div>
+      <div id="result" style="margin-top:14px"></div>
+      <p class="small muted" style="margin:14px 0 0">เวลาที่บันทึกใช้เวลาของเซิร์ฟเวอร์ ไม่ใช่เวลาในเครื่องของคุณ</p>
+    </div>
+  </section>
+
+  <!-- SCHEDULE -->
+  <section class="tab" id="tab-schedule">
+    <div class="card">
+      <div class="head">
+        <h2 id="weekTitle">ตารางกะ</h2>
+        <div style="display:flex;gap:6px">
+          <button class="btn" id="wPrev" aria-label="สัปดาห์ก่อน">◀</button>
+          <button class="btn" id="wNow">สัปดาห์นี้</button>
+          <button class="btn" id="wNext" aria-label="สัปดาห์ถัดไป">▶</button>
+        </div>
+      </div>
+      <div class="scroll"><table class="sched" id="schedTable"></table></div>
+      <div class="legend">
+        <span><span class="pill blue">กะ</span> ตามกะประจำ</span>
+        <span><span class="pill cover">แทน</span> มาทำงานแทนคนอื่น</span>
+        <span><span class="pill warn">เพิ่ม</span> เพิ่มกะ/เปลี่ยนกะ</span>
+        <span><span class="pill off">หยุด</span> หยุด (แสดงชื่อคนแทน)</span>
+        <span id="editHint" hidden>คลิกที่ช่องในตารางเพื่อแก้ไข: หยุด + ระบุคนแทน / เพิ่มกะ / เปลี่ยนกะ</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section class="tab" id="tab-dashboard">
+    <div id="uncovered"></div>
+    <div class="stats" id="stats"></div>
+    <div class="grid2">
+      <div class="card">
+        <h2>สถานะตอนนี้ <span class="muted small" id="todayStr"></span></h2>
+        <div class="scroll"><table id="todayTable"></table></div>
+      </div>
+      <div class="card">
+        <div class="head"><h2>การแจ้งเตือน</h2><button class="btn sm" id="btnReadAll">อ่านทั้งหมด</button></div>
+        <div id="alerts"></div>
+        <div class="small muted">เปิดหน้านี้ค้างไว้เพื่อให้มี pop-up + เสียงเตือนเมื่อมีเหตุการณ์ใหม่</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TEAM -->
+  <section class="tab" id="tab-team">
+    <div class="card">
+      <div class="head"><h2>ทีมและกะ</h2><button class="btn" id="btnAddTeam">+ เพิ่มทีม</button></div>
+      <div class="scroll"><table id="teamTable"></table></div>
+    </div>
+    <div class="card">
+      <div class="head"><h2>บัญชีสมาชิก</h2><button class="btn primary" id="btnAddUser">+ เพิ่มสมาชิก</button></div>
+      <div class="scroll"><table id="userTable"></table></div>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section class="tab" id="tab-history">
+    <div class="card">
+      <h2>ประวัติการเข้างาน</h2>
+      <div class="row" style="align-items:end">
+        <div><label for="hFrom">จากวันที่</label><input type="date" id="hFrom"></div>
+        <div><label for="hTo">ถึงวันที่</label><input type="date" id="hTo"></div>
+        <div><button class="btn primary" id="hGo" style="width:100%">แสดง</button></div>
+      </div>
+      <div class="scroll" style="margin-top:12px"><table id="histTable"></table></div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="tab" id="tab-settings">
+    <div class="card" style="max-width:580px">
+      <h2>ตั้งค่าการแจ้งเตือนและการลงเวลา</h2>
+      <label for="sLate">แจ้งเตือนเมื่อ check-in สายเกิน (นาที)</label><input id="sLate" type="number" min="0" max="999">
+      <label for="sEarly">แจ้งเตือนเมื่อ check-out ก่อนเวลาเลิกกะเกิน (นาที)</label><input id="sEarly" type="number" min="0" max="999">
+      <label for="sNoshow">แจ้งเตือนเมื่อเลยเวลาเริ่มกะแล้วยังไม่ check-in เกิน (นาที)</label><input id="sNoshow" type="number" min="0" max="999">
+      <label for="sOpen">เปิดให้ check-in ล่วงหน้าก่อนกะเริ่ม (นาที)</label><input id="sOpen" type="number" min="0" max="999">
+      <div class="actions"><button class="btn primary" id="sSave">บันทึก</button></div>
+    </div>
+  </section>
+</main>
+</div>
+
+<!-- ================= DIALOGS ================= -->
+<dialog id="dlgPw">
+  <form id="pwForm">
+    <h3>เปลี่ยนรหัสผ่าน</h3>
+    <label for="pwOld">รหัสผ่านเดิม</label><input id="pwOld" type="password" autocomplete="current-password" required>
+    <label for="pwNew">รหัสผ่านใหม่ (อย่างน้อย 8 ตัวอักษร)</label><input id="pwNew" type="password" autocomplete="new-password" minlength="8" required>
+    <label for="pwNew2">ยืนยันรหัสผ่านใหม่</label><input id="pwNew2" type="password" autocomplete="new-password" minlength="8" required>
+    <div class="actions"><button type="button" class="btn" id="pwCancel">ยกเลิก</button><button class="btn primary">บันทึก</button></div>
+  </form>
+</dialog>
+
+<dialog id="dlgEdit">
+  <form id="editForm">
+    <h3 id="eTitle"></h3>
+    <div class="small muted" id="eCurrent"></div>
+    <div id="eLocked" class="pill warn" style="white-space:normal;margin-top:8px" hidden>วันนั้นมีการลงเวลาแล้ว แก้ไขกะไม่ได้</div>
+    <div class="modes" id="eModes">
+      <div class="mode" id="mClear"><label class="top"><input type="radio" name="mode" value="clear"> กลับไปใช้กะประจำ</label></div>
+      <div class="mode" id="mOff">
+        <label class="top"><input type="radio" name="mode" value="off"> หยุด</label>
+        <div class="body"><label for="eCover">ใครทำงานแทน</label><select id="eCover"></select>
+        <div class="small muted" id="eCoverHint" style="margin-top:4px"></div></div>
+      </div>
+      <div class="mode" id="mWork">
+        <label class="top"><input type="radio" name="mode" value="work"> ทำงาน / เปลี่ยนกะ</label>
+        <div class="body"><label for="eShift">กะที่ทำ</label><select id="eShift"></select></div>
+      </div>
+    </div>
+    <div class="actions"><button type="button" class="btn" id="eCancel">ยกเลิก</button><button class="btn primary" id="eSave">บันทึก</button></div>
+  </form>
+</dialog>
+
+<dialog id="dlgUser">
+  <form id="userForm">
+    <h3 id="uTitle">สมาชิก</h3>
+    <div class="row"><div><label for="uName">ชื่อ-นามสกุล</label><input id="uName" required></div>
+      <div><label for="uUser">ชื่อผู้ใช้ (ใช้ล็อกอิน)</label><input id="uUser" autocapitalize="none" spellcheck="false" required></div></div>
+    <div class="small muted" id="uUserHint" hidden>เปลี่ยนชื่อผู้ใช้ไม่ได้หลังลงทะเบียนแล้ว</div>
+    <div class="row"><div><label for="uTeam">ทีม</label><select id="uTeam"></select></div>
+      <div><label for="uShift">กะประจำ</label><select id="uShift"></select></div></div>
+    <div class="row"><div><label for="uPhone">เบอร์โทร</label><input id="uPhone"></div><div><label for="uEmail">อีเมล (ข้อมูลติดต่อ)</label><input id="uEmail" type="email"></div></div>
+    <label for="uNote">หมายเหตุ</label><input id="uNote">
+    <div class="small muted" id="uNewHint" style="margin-top:8px">เมื่อบันทึก ระบบจะออกรหัสเชิญให้ สมาชิกนำไปลงทะเบียนและตั้งรหัสผ่านเอง</div>
+    <div class="actions"><button type="button" class="btn" data-close="dlgUser">ยกเลิก</button><button class="btn primary">บันทึก</button></div>
+  </form>
+</dialog>
+
+<dialog id="dlgInvite">
+  <h3 id="iTitle">รหัสเชิญ</h3>
+  <p class="small muted" id="iDesc" style="margin:0 0 10px"></p>
+  <div class="invite mono" id="iCode"></div>
+  <div class="small" style="margin-top:10px">ชื่อผู้ใช้: <b class="mono" id="iUser"></b></div>
+  <div class="small muted" style="margin-top:6px">ให้สมาชิกเปิดหน้านี้ เลือก "ลงทะเบียนครั้งแรก" แล้วกรอกชื่อผู้ใช้ รหัสเชิญ และตั้งรหัสผ่านเอง<br><span id="iUrl" class="mono" style="overflow-wrap:anywhere"></span></div>
+  <div class="actions"><button type="button" class="btn" id="iCopy">คัดลอกข้อความส่งให้สมาชิก</button><button type="button" class="btn primary" data-close="dlgInvite">ปิด</button></div>
+</dialog>
+
+<dialog id="dlgTeam">
+  <form id="teamForm">
+    <h3 id="tTitle">ทีม</h3>
+    <label for="tName">ชื่อทีม</label><input id="tName" required>
+    <label>วันที่เริ่มกะ</label><div class="days" id="tDays"></div>
+    <label>กะของทีม · เวลา 24 ชั่วโมง (เวลาเลิกน้อยกว่าเวลาเริ่ม = ข้ามเที่ยงคืน เช่น 18:00 ถึง 03:00)</label>
+    <div id="tShifts"></div>
+    <button type="button" class="btn sm" id="tAddShift">+ เพิ่มกะ</button>
+    <div class="actions"><button type="button" class="btn" data-close="dlgTeam">ยกเลิก</button><button class="btn primary">บันทึก</button></div>
+  </form>
+</dialog>
+
+<dialog id="dlgConfirm"><div id="cText" style="white-space:pre-line"></div><div class="actions"><button class="btn" id="cNo">ยกเลิก</button><button class="btn primary" id="cYes">ยืนยัน</button></div></dialog>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const DAYN = ['จันทร์','อังคาร','พุธ','พฤหัสฯ','ศุกร์','เสาร์','อาทิตย์'];
+const DAYS = ['จ','อ','พ','พฤ','ศ','ส','อา'];
+const pad = n => String(n).padStart(2,'0');
+const isoDate = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parseISO = s => new Date(s + 'T00:00:00');
+const wdOf = d => (d.getDay()+6)%7;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dayLabel = iso => { const d = parseISO(iso); return `${DAYS[wdOf(d)]} ${d.getDate()}/${d.getMonth()+1}`; };
+const dayLabelFull = iso => { const d = parseISO(iso); return `วัน${DAYN[wdOf(d)]}ที่ ${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`; };
+const timeRange = s => s ? `${s.start}–${s.end}${s.overnight ? ' (+1)' : ''}` : '';
+
+let ME = null, TEAMS = [], weekStart = null, lastAlertId = null, pollTimer = null, statusTimer = null, currentTab = null;
+
+/* ================= theme ================= */
+function effectiveTheme(){
+  const t = document.documentElement.getAttribute('data-theme');
+  return t || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+}
+function applyThemeLabel(){ const b = $('#btnTheme'); if (b) b.textContent = effectiveTheme() === 'dark' ? 'โหมดสว่าง' : 'โหมดมืด'; }
+function setTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  try { localStorage.setItem('theme', t); } catch (e) {}
+  applyThemeLabel();
+}
+(function(){ let t = null; try { t = localStorage.getItem('theme'); } catch (e) {} if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t); })();
+$$('[data-theme-toggle]').forEach(b => b.onclick = () => setTheme(effectiveTheme() === 'dark' ? 'light' : 'dark'));
+
+/* ================= helpers ================= */
+function toast(msg, kind = '', ms = 4500) {
+  const t = document.createElement('div'); t.className = 'toast ' + kind; t.textContent = msg;
+  $('#toasts').appendChild(t); setTimeout(() => t.remove(), ms);
+}
+function beep() {
+  try {
+    const c = new (window.AudioContext || window.webkitAudioContext)();
+    [880, 660].forEach((f, i) => {
+      const o = c.createOscillator(), g = c.createGain();
+      o.frequency.value = f; o.connect(g); g.connect(c.destination);
+      g.gain.setValueAtTime(.15, c.currentTime + i*.18); g.gain.exponentialRampToValueAtTime(.001, c.currentTime + i*.18 + .16);
+      o.start(c.currentTime + i*.18); o.stop(c.currentTime + i*.18 + .17);
+    });
+  } catch (e) {}
+}
+function confirmBox(text) {
+  return new Promise(res => {
+    $('#cText').textContent = text; const d = $('#dlgConfirm'); d.showModal();
+    const done = v => { d.close(); res(v); };
+    $('#cYes').onclick = () => done(true); $('#cNo').onclick = () => done(false);
+  });
+}
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); toast('คัดลอกแล้ว', 'good'); }
+  catch (e) { toast('คัดลอกอัตโนมัติไม่ได้ กรุณาลากคลุมข้อความแล้วคัดลอกเอง', 'warn'); }
+}
+$$('[data-close]').forEach(b => b.onclick = () => $('#' + b.dataset.close).close());
+
+/* ================= Supabase + ข้อมูล ================= */
+const CFG = window.APP_CONFIG || {};
+const CONFIGURED = !!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY && !/YOUR_SUPABASE/.test(CFG.SUPABASE_URL + CFG.SUPABASE_ANON_KEY));
+let sb = null;
+const emailOf = u => `${String(u).trim().toLowerCase()}@${CFG.EMAIL_DOMAIN || 'shiftcheckin.app'}`;
+
+function friendly(err) {
+  const m = String((err && err.message) || err || '');
+  if (/failed to fetch|networkerror|load failed/i.test(m)) return 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่';
+  return m || 'เกิดข้อผิดพลาด';
+}
+async function rpc(name, args) {
+  const { data, error } = await sb.rpc(name, args || {});
+  if (error) {
+    const e = new Error(friendly(error)); e.code = error.code;
+    if (error.code === 'PGRST301' || /jwt (expired|invalid)/i.test(error.message || '')) e.auth = true;
+    throw e;
+  }
+  return data;
+}
+
+/* ---- สถานะข้อมูลที่ดึงจากเซิร์ฟเวอร์ ---- */
+const S = {settings: {}, teams: [], shifts: [], users: [], overrides: [], attendance: [], ctxAt: 0};
+let serverOffset = 0;
+const parseDt = s => new Date(s.replace(' ', 'T'));            // เวลาไทยเก็บเป็นเวลา "ท้องถิ่นเปล่า" ทั้งระบบ
+const fmt = d => `${isoDate(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+const nowD = () => new Date(Date.now() + serverOffset);
+const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const addMin = (d, n) => new Date(d.getTime() + n * 60000);
+const hmN = s => { const [h, m] = s.split(':'); return +h * 60 + +m; };
+const atD = (day, hhmm) => new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, hmN(hhmm));
+const hhmmOf = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const fail = msg => { throw new Error(msg); };
+
+async function refreshCtx(force) {
+  if (!force && Date.now() - S.ctxAt < 15000) return;
+  const c = await rpc('get_context');
+  S.settings = c.settings; S.shifts = c.shifts;
+  S.teams = c.teams.map(t => ({...t, days: t.days.join(',')}));
+  S.users = c.people.map(p => ({...p, role: 'member'}));
+  serverOffset = parseDt(c.now).getTime() - Date.now();
+  S.ctxAt = Date.now();
+  ME = {...c.me, team_name: (S.teams.find(t => t.id === c.me.team_id) || {}).name || null};
+}
+async function ensure(from, to) {
+  const w = await rpc('get_week', {p_from: isoDate(from), p_to: isoDate(to)});
+  S.overrides = w.overrides; S.attendance = w.attendance;
+}
+const userOf = id => S.users.find(u => u.id === id) || null;
+const uname = id => (userOf(id) || {}).name || null;
+const shiftOf = id => S.shifts.find(s => s.id === id) || null;
+const teamName = id => (S.teams.find(t => t.id === id) || {}).name;
+const teamsWith = () => S.teams.map(t => ({...t, shifts: S.shifts.filter(s => s.team_id === t.id).sort((a, b) => a.sort - b.sort), member_count: S.users.filter(u => u.team_id === t.id).length}));
+const sortM = () => S.users.slice().sort((a, b) => ((a.team_id || 99) - (b.team_id || 99)) || ((a.shift_id || 0) - (b.shift_id || 0)) || (a.name < b.name ? -1 : 1));
+
+/* ---- ตรรกะตารางกะ (ตรงกับฟังก์ชัน _shift_for ในฐานข้อมูล) ---- */
+function shiftTimes(day, sh) { const st = atD(day, sh.start_time); let en = atD(day, sh.end_time); if (en <= st) en = addDays(en, 1); return [st, en]; }
+function shiftInfo(sh, day) {
+  if (!sh) return null; const [st, en] = shiftTimes(day, sh);
+  return {id: sh.id, name: sh.name, start: sh.start_time, end: sh.end_time, overnight: isoDate(en) > isoDate(st), start_dt: fmt(st), end_dt: fmt(en)};
+}
+let OPS = null;                                                  // บันทึกคำสั่งแก้ override ขณะวางแผน
+const getOv = (uid, iso) => S.overrides.find(o => o.user_id === uid && o.day === iso) || null;
+function delOv(uid, iso) { S.overrides = S.overrides.filter(o => !(o.user_id === uid && o.day === iso)); if (OPS) OPS.push({op: 'delete', user_id: uid, day: iso}); }
+function putOv(o) {
+  S.overrides = S.overrides.filter(x => !(x.user_id === o.user_id && x.day === o.day)); S.overrides.push(o);
+  if (OPS) OPS.push({op: 'upsert', ...o});
+}
+const attOf = (uid, iso) => S.attendance.find(a => a.user_id === uid && a.day === iso) || null;
+
+function assignment(u, day) {
+  const iso = isoDate(day), ov = getOv(u.id, iso);
+  let base = null;
+  if (u.role === 'member' && u.team_id && u.shift_id) {
+    const t = S.teams.find(x => x.id === u.team_id);
+    if (t && t.days.split(',').includes(String(wdOf(day)))) base = shiftOf(u.shift_id);
+  }
+  const a = {base: !!base, override: ov ? ov.kind : null, on: !!base, shift: base, cover_user_id: null, cover_for_user_id: null};
+  if (ov) {
+    if (ov.kind === 'off') { a.on = false; a.cover_user_id = ov.cover_user_id || null; }
+    else if (ov.kind === 'work') { const sh = shiftOf(ov.shift_id); if (sh) { a.on = true; a.shift = sh; } a.cover_for_user_id = ov.cover_for_user_id || null; }
+  }
+  return a;
+}
+function dayStatus(u, day, n) {
+  const a = assignment(u, day), att = attOf(u.id, isoDate(day));
+  let info = shiftInfo(a.shift, day);
+  if (att && att.shift_start) info = {...(info || {}), id: att.shift_id, name: att.shift_name, start: att.shift_start.slice(11, 16), end: att.shift_end.slice(11, 16), overnight: att.shift_end.slice(0, 10) > att.shift_start.slice(0, 10), start_dt: att.shift_start, end_dt: att.shift_end};
+  const out = {user_id: u.id, name: u.name, team_id: u.team_id, day: isoDate(day), base: a.base, override: a.override, on: a.on || !!att, shift: info,
+    cover_user_id: a.cover_user_id, cover_name: uname(a.cover_user_id), cover_for_user_id: a.cover_for_user_id, cover_for_name: uname(a.cover_for_user_id),
+    check_in: att && att.check_in ? att.check_in.slice(11, 16) : null, check_out: att && att.check_out ? att.check_out.slice(11, 16) : null,
+    late_min: att ? att.late_min : 0, early_min: att ? att.early_min : 0};
+  if (!out.on) out.status = 'off';
+  else if (out.check_out) out.status = 'done';
+  else if (out.check_in) out.status = 'working';
+  else if (info) {
+    const st = parseDt(info.start_dt), en = parseDt(info.end_dt);
+    out.status = n >= en ? 'absent' : n > addMin(st, +S.settings.late_min) ? 'missing' : 'waiting';
+  } else out.status = 'off';
+  return out;
+}
+function hasOverlap(u, day, st, en, skip) {
+  for (const d of [addDays(day, -1), day, addDays(day, 1)]) {
+    if (skip && isoDate(d) === isoDate(skip)) continue;
+    const a = assignment(u, d);
+    if (a.on && a.shift) { const [s2, e2] = shiftTimes(d, a.shift); if (s2 < en && st < e2) return true; }
+  }
+  return false;
+}
+function clearOverride(uid, iso) {
+  const ov = getOv(uid, iso); if (!ov) return;
+  if (ov.kind === 'off' && ov.cover_user_id) { const cv = getOv(ov.cover_user_id, iso); if (cv && cv.cover_for_user_id === uid) delOv(ov.cover_user_id, iso); }
+  if (ov.kind === 'work' && ov.cover_for_user_id) { const off = getOv(ov.cover_for_user_id, iso); if (off && off.kind === 'off' && off.cover_user_id === uid) putOv({...off, cover_user_id: null}); }
+  delOv(uid, iso);
+}
+function coverOptions(target, day) {
+  const a = assignment(target, day), sh = a.shift; if (!sh) fail('วันนี้ไม่มีกะให้หาคนแทน');
+  const [st, en] = shiftTimes(day, sh), ok = [], blocked = [];
+  sortM().filter(u => u.id !== target.id).forEach(cu => {
+    const a2 = assignment(cu, day), current = a2.override === 'work' && a2.cover_for_user_id === target.id;
+    const rec = {id: cu.id, name: cu.name, team_name: teamName(cu.team_id) || 'ไม่มีทีม', current};
+    if (a2.on && !current) blocked.push({...rec, reason: `มีกะ ${a2.shift.name} อยู่แล้ว`});
+    else if (hasOverlap(cu, day, st, en, day)) blocked.push({...rec, reason: 'เวลาชนกับกะติดกัน'});
+    else ok.push(rec);
+  });
+  return {shift: shiftInfo(sh, day), candidates: ok, blocked};
+}
+function planOverride(b) {                                       // คืนรายการคำสั่งที่จะส่งให้ฐานข้อมูล (ยังไม่เขียนจริง)
+  const uid = +b.user_id, u = userOf(uid); if (!u) fail('ไม่พบสมาชิก');
+  const day = parseISO(b.day), iso = isoDate(day);
+  if (attOf(uid, iso) && b.action !== 'clear') fail('วันนั้นมีการลงเวลาไปแล้ว แก้ไขกะไม่ได้');
+  const backup = S.overrides.map(o => ({...o})); OPS = [];
+  try {
+    const cur = assignment(u, day);
+    if (b.action === 'clear') clearOverride(uid, iso);
+    else if (b.action === 'off') {
+      if (!cur.shift || (!cur.on && cur.override !== 'off')) fail('วันนั้นไม่มีกะให้ปรับเป็นหยุด');
+      const sh = cur.shift; clearOverride(uid, iso);
+      const base = assignment(u, day); let cu = null;
+      if (b.cover_user_id) {
+        cu = userOf(+b.cover_user_id); if (!cu || cu.id === uid) fail('ไม่พบคนทำงานแทน');
+        if (assignment(cu, day).on) fail(`${cu.name} มีกะในวันนั้นอยู่แล้ว`);
+        const [st, en] = shiftTimes(day, sh); if (hasOverlap(cu, day, st, en, day)) fail(`เวลาทำงานของ ${cu.name} ชนกับกะติดกัน`);
+      }
+      if (base.base) {
+        putOv({user_id: uid, day: iso, kind: 'off', shift_id: null, cover_user_id: cu ? cu.id : null, cover_for_user_id: null});
+        if (cu) putOv({user_id: cu.id, day: iso, kind: 'work', shift_id: sh.id, cover_user_id: null, cover_for_user_id: uid});
+      }
+    } else if (b.action === 'work') {
+      const sh = shiftOf(+b.shift_id); if (!sh) fail('กรุณาเลือกกะ');
+      clearOverride(uid, iso); const [st, en] = shiftTimes(day, sh);
+      if (hasOverlap(u, day, st, en, day)) fail('เวลาชนกับกะของวันก่อน/วันถัดไป');
+      putOv({user_id: uid, day: iso, kind: 'work', shift_id: sh.id, cover_user_id: null, cover_for_user_id: null});
+    } else fail('action ไม่ถูกต้อง');
+    return OPS;
+  } finally { S.overrides = backup; OPS = null; }
+}
+function meStatus(u, n) {                                        // ตรงกับกติกาใน do_checkin / do_checkout
+  const openMin = +S.settings.checkin_open_min;
+  const w = S.attendance.filter(a => a.user_id === u.id && a.check_in && !a.check_out).sort((x, y) => y.day < x.day ? -1 : 1)[0];
+  if (w && addMin(parseDt(w.shift_end), 360) >= n)
+    return {state: 'working', day: w.day, check_in: w.check_in.slice(11, 16), late_min: w.late_min,
+      shift: {id: w.shift_id, name: w.shift_name, start: w.shift_start.slice(11, 16), end: w.shift_end.slice(11, 16), overnight: w.shift_end.slice(0, 10) > w.shift_start.slice(0, 10), start_dt: w.shift_start, end_dt: w.shift_end}};
+  const today = new Date(n.getFullYear(), n.getMonth(), n.getDate());
+  let best = null;
+  for (const d of [addDays(today, -1), today, addDays(today, 1)]) {
+    const a = assignment(u, d); if (!a.on || attOf(u.id, isoDate(d))) continue;
+    const [st, en] = shiftTimes(d, a.shift);
+    if (addMin(st, -openMin) <= n && n < en && (!best || Math.abs(st - n) < Math.abs(best.st - n))) best = {d, st, en, a};
+  }
+  let nxt = null;
+  for (let i = -1; i < 9; i++) {
+    const d = addDays(today, i), a = assignment(u, d);
+    if (a.on && !attOf(u.id, isoDate(d))) { const [st] = shiftTimes(d, a.shift); if (st > n && (!best || isoDate(d) !== isoDate(best.d))) { nxt = {...shiftInfo(a.shift, d), day: isoDate(d), cover_for_name: uname(a.cover_for_user_id)}; break; } }
+  }
+  if (best) return {state: 'can_checkin', day: isoDate(best.d), late_now: Math.max(0, Math.floor((n - best.st) / 60000)), shift: {...shiftInfo(best.a.shift, best.d), cover_for_name: uname(best.a.cover_for_user_id)}, next: nxt};
+  const last = S.attendance.filter(a => a.user_id === u.id && a.check_out).sort((x, y) => x.check_out < y.check_out ? 1 : -1)[0];
+  if (last && parseDt(last.check_out) >= addMin(n, -720)) return {state: 'done', check_in: last.check_in.slice(11, 16), check_out: last.check_out.slice(11, 16), late_min: last.late_min, early_min: last.early_min, shift_name: last.shift_name, next: nxt};
+  return {state: 'none', next: nxt};
+}
+const sentNoshow = new Set();
+function noshowAlerts(n) {
+  const today = new Date(n.getFullYear(), n.getMonth(), n.getDate()), out = [];
+  S.users.forEach(u => [addDays(today, -1), today].forEach(d => {
+    const a = assignment(u, d); if (!a.on) return;
+    const [st, en] = shiftTimes(d, a.shift), key = u.id + '|' + isoDate(d);
+    if (addMin(st, +S.settings.noshow_min) <= n && n < en && !(attOf(u.id, isoDate(d)) || {}).check_in && !sentNoshow.has(key)) {
+      const mins = Math.floor((n - st) / 60000);
+      out.push({kind: 'noshow', user_id: u.id, day: isoDate(d), message: `${u.name} ยังไม่ check-in (${a.shift.name} เริ่ม ${a.shift.start_time} เลยมาแล้ว ${mins} นาที)`, _key: key});
+    }
+  }));
+  return out;
+}
+
+/* ---- เส้นทาง API ภายในหน้าเว็บ (ส่วนที่เขียนข้อมูลเรียกฟังก์ชันในฐานข้อมูล) ---- */
+async function api(path, opt = {}) {
+  const u = new URL(path, 'http://x'), p = u.pathname, q = u.searchParams, m = (opt.method || 'GET').toUpperCase(), b = opt.body || {};
+  const today = () => { const n = nowD(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); };
+  if (m === 'GET' && p === '/api/me') {
+    await refreshCtx(true); const t = today(); await ensure(addDays(t, -3), addDays(t, 10)); const n = nowD();
+    return {user: ME, now: fmt(n), status: ME.role === 'member' ? meStatus(userOf(ME.id), n) : null};
+  }
+  if (m === 'POST' && p === '/api/checkin') {
+    await refreshCtx(true); const t = today(); await ensure(addDays(t, -3), addDays(t, 10));
+    const st = meStatus(userOf(ME.id), nowD());
+    if (st.state === 'working') fail('check-in ไปแล้ว ตอนนี้กำลังทำงานอยู่');
+    if (st.state !== 'can_checkin') fail('ตอนนี้ยังไม่อยู่ในช่วงเวลา check-in ของคุณ' + (st.next ? ` (กะถัดไป ${dayLabel(st.next.day)} ${st.next.name} ${st.next.start}–${st.next.end})` : ''));
+    const r = await rpc('do_checkin', {p_day: st.day, p_shift_id: st.shift.id});
+    return {ok: true, message: `Check-in สำเร็จ เวลา ${r.time} (${r.shift_name})`, late_min: r.late_min, warn: r.warn};
+  }
+  if (m === 'POST' && p === '/api/checkout') {
+    const r = await rpc('do_checkout');
+    return {ok: true, message: `Check-out สำเร็จ เวลา ${r.time}`, early_min: r.early_min, warn: r.warn};
+  }
+  if (m === 'GET' && p === '/api/schedule') {
+    await refreshCtx(); let start = q.get('start') ? parseISO(q.get('start')) : today(); start = addDays(start, -wdOf(start));
+    await ensure(addDays(start, -3), addDays(start, 9)); const n = nowD();
+    const days = [0, 1, 2, 3, 4, 5, 6].map(i => addDays(start, i));
+    return {days: days.map(isoDate), today: isoDate(today()), rows: sortM().map(x => ({user_id: x.id, name: x.name, team_id: x.team_id, team_name: teamName(x.team_id) || 'ไม่มีทีม', cells: days.map(d => dayStatus(x, d, n))}))};
+  }
+  if (m === 'GET' && p === '/api/teams') { await refreshCtx(); return {teams: teamsWith()}; }
+  if (m === 'GET' && p === '/api/admin/today') {
+    await refreshCtx(); const t = today(); await ensure(addDays(t, -3), addDays(t, 14)); const n = nowD(), items = [];
+    sortM().forEach(x => [addDays(t, -1), t].forEach(d => {
+      const st = dayStatus(x, d, n); if (!st.on) return;
+      if (isoDate(d) < isoDate(t) && st.shift && parseDt(st.shift.end_dt) <= n && st.status !== 'working') return;
+      items.push({...st, team_name: teamName(x.team_id) || '-'});
+    }));
+    items.sort((x, y) => ((x.shift || {}).start_dt || '') < ((y.shift || {}).start_dt || '') ? -1 : 1);
+    const unc = S.overrides.filter(o => o.kind === 'off' && !o.cover_user_id && o.day >= isoDate(t) && o.day <= isoDate(addDays(t, 14))).sort((x, y) => x.day < y.day ? -1 : 1)
+      .map(o => { const x = userOf(o.user_id); if (!x) return null; const a = assignment(x, parseISO(o.day)); return {user_id: x.id, name: x.name, day: o.day, shift: shiftInfo(a.shift, parseISO(o.day))}; }).filter(Boolean);
+    return {today: isoDate(t), items, uncovered: unc};
+  }
+  if (m === 'GET' && p === '/api/admin/alerts') {
+    await refreshCtx(); const t = today(); await ensure(addDays(t, -3), addDays(t, 2));
+    const fresh = noshowAlerts(nowD());
+    if (fresh.length) { await rpc('admin_add_alerts', {p: fresh.map(({_key, ...r}) => r)}); fresh.forEach(f => sentNoshow.add(f._key)); }
+    return await rpc('admin_alerts');
+  }
+  if (m === 'POST' && p === '/api/admin/alerts/read') return await rpc('admin_mark_alerts_read');
+  if (m === 'GET' && p === '/api/admin/users') { await refreshCtx(true); return {users: await rpc('admin_users'), teams: teamsWith()}; }
+  if (m === 'POST' && p === '/api/admin/users') { const r = await rpc('admin_save_user', {p: b}); S.ctxAt = 0; return r; }
+  let mm = p.match(/^\/api\/admin\/users\/(\d+)$/);
+  if (mm) {
+    const id = +mm[1];
+    if (m === 'PUT') { const r = await rpc('admin_save_user', {p: {...b, id}}); S.ctxAt = 0; return r; }
+    if (m === 'DELETE') { const r = await rpc('admin_delete_user', {p_id: id}); S.ctxAt = 0; return r; }
+  }
+  mm = p.match(/^\/api\/admin\/users\/(\d+)\/reset$/);
+  if (mm && m === 'POST') return await rpc('admin_reset_user', {p_id: +mm[1]});
+  if (m === 'POST' && p === '/api/admin/teams') { const r = await rpc('admin_save_team', {p: b}); S.ctxAt = 0; return r; }
+  mm = p.match(/^\/api\/admin\/teams\/(\d+)$/);
+  if (mm) {
+    const id = +mm[1];
+    if (m === 'PUT') { const r = await rpc('admin_save_team', {p: {...b, id}}); S.ctxAt = 0; return r; }
+    if (m === 'DELETE') { const r = await rpc('admin_delete_team', {p_id: id}); S.ctxAt = 0; return r; }
+  }
+  if (m === 'GET' && p === '/api/admin/cover_options') {
+    await refreshCtx(true); const day = parseISO(q.get('day')); await ensure(addDays(day, -3), addDays(day, 3));
+    const t = userOf(+q.get('user_id')); if (!t) fail('ไม่พบสมาชิก'); return coverOptions(t, day);
+  }
+  if (m === 'POST' && p === '/api/admin/override') {
+    await refreshCtx(true); const day = parseISO(b.day); await ensure(addDays(day, -3), addDays(day, 3));
+    const ops = planOverride(b); if (ops.length) await rpc('admin_apply_overrides', {p_ops: ops}); return {ok: true};
+  }
+  if (m === 'GET' && p === '/api/admin/settings') { await refreshCtx(true); return {...S.settings}; }
+  if (m === 'PUT' && p === '/api/admin/settings') { await rpc('admin_set_settings', {p: b}); await refreshCtx(true); return {ok: true}; }
+  if (m === 'GET' && p === '/api/admin/attendance') return {rows: await rpc('admin_attendance', {p_from: q.get('from'), p_to: q.get('to')})};
+  fail('ไม่พบ API นี้');
+}
+
+/* ================= clock ================= */
+function tickClock() {
+  const d = nowD();
+  $('#clock').textContent = `${DAYN[wdOf(d)]} ${d.getDate()}/${d.getMonth()+1} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+setInterval(() => { if (ME) tickClock(); }, 1000);
+
+/* ================= login / register / session ================= */
+function showView(name) { ['setupView', 'loginView', 'appView'].forEach(v => $('#' + v).hidden = v !== name); }
+function loginMsg(msg, good) {
+  const e = $('#lErr'); e.className = 'pill ' + (good ? 'ok' : 'bad'); e.textContent = msg || ''; e.style.display = msg ? 'inline-block' : 'none';
+}
+function showLogin(msg) {
+  stopPolling(); clearInterval(statusTimer); ME = null; sentNoshow.clear();
+  showView('loginView'); loginMsg(msg); $('#lPass').value = '';
+  if ($('#dlgPw').open) $('#dlgPw').close();
+}
+function setLoginTab(reg) {
+  $('#tabLogin').classList.toggle('active', !reg); $('#tabReg').classList.toggle('active', reg);
+  $('#loginForm').hidden = reg; $('#regForm').hidden = !reg; loginMsg('');
+  setTimeout(() => $(reg ? '#rUser' : '#lUser').focus(), 0);
+}
+$('#tabLogin').onclick = () => setLoginTab(false);
+$('#tabReg').onclick = () => setLoginTab(true);
+
+$('#loginForm').addEventListener('submit', async e => {
+  e.preventDefault(); $('#lBtn').disabled = true; loginMsg('');
+  try {
+    const { error } = await sb.auth.signInWithPassword({email: emailOf($('#lUser').value), password: $('#lPass').value});
+    if (error) {
+      if (/invalid login|invalid_credentials/i.test(error.message + (error.code || ''))) throw new Error('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+      if (/rate limit|too many/i.test(error.message)) throw new Error('ลองผิดหลายครั้ง กรุณารอสักครู่แล้วลองใหม่');
+      throw new Error(friendly(error));
+    }
+    await boot();
+  } catch (err) { loginMsg(err.message); }
+  $('#lBtn').disabled = false;
+});
+$('#regForm').addEventListener('submit', async e => {
+  e.preventDefault(); $('#rBtn').disabled = true; loginMsg('');
+  const username = $('#rUser').value.trim().toLowerCase(), code = $('#rCode').value.trim(), pw = $('#rPass').value;
+  try {
+    if (pw.length < 8) throw new Error('รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร');
+    if (pw !== $('#rPass2').value) throw new Error('รหัสผ่านทั้งสองช่องไม่ตรงกัน');
+    if (pw.toLowerCase() === username) throw new Error('รหัสผ่านต้องไม่เหมือนชื่อผู้ใช้');
+    const ok = await rpc('check_invite', {p_username: username, p_invite: code});
+    if (!ok) throw new Error('ชื่อผู้ใช้หรือรหัสเชิญไม่ถูกต้อง หรือรหัสนี้ถูกใช้ไปแล้ว');
+    const email = emailOf(username);
+    const su = await sb.auth.signUp({email, password: pw});
+    if (su.error) {
+      if (/already|user_already_exists/i.test(su.error.message + (su.error.code || ''))) {      // เคยสมัครค้างไว้ → ลองเข้าสู่ระบบด้วยรหัสเดิม
+        const si = await sb.auth.signInWithPassword({email, password: pw});
+        if (si.error) throw new Error('ชื่อผู้ใช้นี้เคยลงทะเบียนไว้แล้วด้วยรหัสผ่านอื่น กรุณาแจ้งหัวหน้าให้รีเซ็ตบัญชี');
+      } else if (/invalid/i.test(su.error.message) && /email/i.test(su.error.message)) {
+        throw new Error('Supabase ไม่ยอมรับอีเมลภายในที่ระบบสร้าง: ให้แก้ EMAIL_DOMAIN ใน config.js เป็นโดเมนจริงที่มี MX (ดู README หัวข้อแก้ปัญหา)');
+      } else throw new Error(friendly(su.error));
+    } else if (!su.data.session) {
+      throw new Error('Supabase ยังเปิด "Confirm email" อยู่ ผู้ดูแลต้องปิดก่อน (ดู README ขั้นตอนที่ 3)');
+    }
+    try { await rpc('claim_profile', {p_username: username, p_invite: code}); }
+    catch (err) { await sb.auth.signOut(); throw err; }
+    toast('ลงทะเบียนสำเร็จ', 'good'); await boot();
+  } catch (err) { loginMsg(err.message); }
+  $('#rBtn').disabled = false;
+});
+$('#btnLogout').onclick = async () => { try { await sb.auth.signOut(); } catch (e) {} showLogin(); };
+
+async function boot() {
+  if (!CONFIGURED) { showView('setupView'); return; }
+  const { data } = await sb.auth.getSession();
+  if (!data || !data.session) return showLogin();
+  try { await refreshCtx(true); }
+  catch (e) {
+    if (/ยังไม่ได้ลงทะเบียน/.test(e.message)) { await sb.auth.signOut(); return showLogin('บัญชีนี้ยังไม่ได้ลงทะเบียนกับระบบ ให้เลือก "ลงทะเบียนครั้งแรก" แล้วใช้รหัสเชิญจากหัวหน้า'); }
+    if (e.auth) { await sb.auth.signOut(); return showLogin('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่'); }
+    return showLogin(e.message);
+  }
+  TEAMS = teamsWith();
+  showView('appView'); tickClock();
+  $('#whoName').textContent = ME.name; $('#whoRole').textContent = ME.role === 'admin' ? 'หัวหน้า' : (ME.team_name || 'สมาชิก');
+  applyThemeLabel();
+  const tabs = ME.role === 'admin'
+    ? [['dashboard','แดชบอร์ด'],['schedule','ตารางกะ'],['team','ทีมและสมาชิก'],['history','ประวัติ'],['settings','ตั้งค่า']]
+    : [['checkin','ลงเวลา'],['schedule','ตารางกะ']];
+  $('#nav').innerHTML = tabs.map(([k, l]) => `<button data-tab="${k}">${l}${k === 'dashboard' ? ' <span id="alertBadge" class="badge" hidden>0</span>' : ''}</button>`).join('');
+  $$('#nav button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+  $('#editHint').hidden = ME.role !== 'admin';
+  if (ME.role === 'admin') startPolling();
+  showTab(tabs[0][0]);
+}
+
+/* ---------------- password ---------------- */
+function openPw() { ['#pwOld','#pwNew','#pwNew2'].forEach(s => $(s).value = ''); $('#dlgPw').showModal(); }
+$('#pwCancel').onclick = () => $('#dlgPw').close();
+$('#btnPw').onclick = openPw;
+$('#pwForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const np = $('#pwNew').value;
+  if (np !== $('#pwNew2').value) return toast('รหัสผ่านใหม่ทั้งสองช่องไม่ตรงกัน', 'err');
+  if (np.length < 8) return toast('รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร', 'err');
+  if (np.toLowerCase() === ME.username) return toast('รหัสผ่านต้องไม่เหมือนชื่อผู้ใช้', 'err');
+  if (np === $('#pwOld').value) return toast('รหัสผ่านใหม่ต้องไม่ซ้ำรหัสเดิม', 'err');
+  try {
+    const chk = await sb.auth.signInWithPassword({email: emailOf(ME.username), password: $('#pwOld').value});
+    if (chk.error) throw new Error('รหัสผ่านเดิมไม่ถูกต้อง');
+    const r = await sb.auth.updateUser({password: np});
+    if (r.error) throw new Error(friendly(r.error));
+    $('#dlgPw').close(); toast('เปลี่ยนรหัสผ่านแล้ว', 'good');
+  } catch (err) { toast(err.message, 'err'); }
+});
+
+/* ---------------- tabs ---------------- */
+function showTab(name) {
+  currentTab = name;
+  $$('#nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  $$('main > section').forEach(s => s.classList.toggle('active', s.id === 'tab-' + name));
+  clearInterval(statusTimer);
+  if (name === 'checkin') { loadStatus(); statusTimer = setInterval(loadStatus, 30000); }
+  if (name === 'schedule') loadSchedule();
+  if (name === 'dashboard') refreshDash();
+  if (name === 'team') loadTeamTab();
+  if (name === 'history') loadHistory();
+  if (name === 'settings') loadSettings();
+}
+async function guard(fn) { try { return await fn(); } catch (e) { if (e.auth) { try { await sb.auth.signOut(); } catch (x) {} showLogin('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่'); } else toast(e.message, 'err'); } }
+
+/* ---------------- check-in ---------------- */
+async function loadStatus() {
+  let m; try { m = await api('/api/me'); } catch (e) { if (e.auth) guard(() => { throw e; }); return; }
+  const st = m.status || {state:'none'}, box = $('#meBox');
+  const shiftLine = s => `${esc(s.name)} · ${timeRange(s)}`;
+  const nxt = st.next ? `<div class="small muted" style="margin-top:8px">กะถัดไป: ${dayLabel(st.next.day)} ${shiftLine(st.next)}${st.next.cover_for_name ? ' (ทำงานแทน ' + esc(st.next.cover_for_name) + ')' : ''}</div>` : '';
+  let h = '', canIn = false, canOut = false;
+  if (st.state === 'can_checkin') {
+    canIn = true; box.className = 'status-box go';
+    h = `<span class="big">${shiftLine(st.shift)}</span>` +
+        (st.shift.cover_for_name ? `<span class="pill cover">ทำงานแทน ${esc(st.shift.cover_for_name)}</span> ` : '') +
+        (st.late_now > 0 ? `<span class="pill warn">เลยเวลาเริ่มกะมาแล้ว ${st.late_now} นาที</span>` : '<span class="pill ok">พร้อม check-in</span>');
+  } else if (st.state === 'working') {
+    canOut = true; box.className = 'status-box go';
+    h = `<span class="big">กำลังทำงาน · ${shiftLine(st.shift)}</span>เข้างาน ${st.check_in}${st.late_min ? ` <span class="pill warn">สาย ${st.late_min} นาที</span>` : ''}`;
+  } else if (st.state === 'done') {
+    box.className = 'status-box';
+    h = `<span class="big">เลิกงานแล้ว</span>${esc(st.shift_name)} · เข้า ${st.check_in} ออก ${st.check_out}${st.late_min ? ` <span class="pill warn">สาย ${st.late_min} นาที</span>` : ''}${st.early_min ? ` <span class="pill warn">ออกก่อน ${st.early_min} นาที</span>` : ''}`;
+  } else { box.className = 'status-box'; h = '<span class="big">ตอนนี้ไม่มีกะที่ต้อง check-in</span>'; }
+  box.innerHTML = h + nxt;
+  $('#btnIn').disabled = !canIn; $('#btnOut').disabled = !canOut;
+}
+async function doAction(kind) {
+  $('#btnIn').disabled = $('#btnOut').disabled = true;
+  try {
+    const r = await api('/api/' + kind, {method:'POST', body:{}});
+    $('#result').innerHTML = `<div class="status-box" style="background:var(--${r.warn ? 'warn' : 'ok'}-bg)">${esc(r.message)}${r.late_min > 0 ? ` (สาย ${r.late_min} นาที)` : ''}${r.early_min > 0 ? ` (ออกก่อน ${r.early_min} นาที)` : ''}</div>`;
+    toast(r.message, r.warn ? 'warn' : 'good');
+  } catch (e) { toast(e.message, 'err'); }
+  loadStatus();
+}
+$('#btnIn').onclick = () => doAction('checkin');
+$('#btnOut').onclick = () => doAction('checkout');
+
+/* ---------------- schedule ---------------- */
+function mondayOf(d) { const x = new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate() - wdOf(x)); return x; }
+async function loadSchedule() {
+  await guard(async () => {
+    if (!weekStart) weekStart = mondayOf(nowD());
+    const s = await api('/api/schedule?start=' + isoDate(weekStart));
+    const d0 = parseISO(s.days[0]), d6 = parseISO(s.days[6]);
+    $('#weekTitle').textContent = `ตารางกะ ${d0.getDate()}/${d0.getMonth()+1} – ${d6.getDate()}/${d6.getMonth()+1}/${d6.getFullYear()}`;
+    let h = '<tr><th>ชื่อ</th>' + s.days.map((d, i) => `<th class="${d === s.today ? 'today' : ''}">${DAYS[i]} ${+d.slice(8)}</th>`).join('') + '</tr>';
+    let lastTeam = null;
+    for (const r of s.rows) {
+      if (r.team_name !== lastTeam) { h += `<tr class="team"><td colspan="8">${esc(r.team_name)}</td></tr>`; lastTeam = r.team_name; }
+      h += `<tr class="${r.user_id === ME.id ? 'me' : ''}"><td>${esc(r.name)}</td>` + r.cells.map(c => cellHtml(c, r.user_id, s.today)).join('') + '</tr>';
+    }
+    const tbl = $('#schedTable'); tbl.innerHTML = h;
+    const admin = ME.role === 'admin';
+    tbl.classList.toggle('editable', admin);
+    if (admin) tbl.querySelectorAll('[data-uid]').forEach(el => el.onclick = () => openEdit(+el.dataset.uid, el.dataset.day));
+  });
+}
+function cellHtml(c, uid, today) {
+  let cls, inner;
+  const sh = c.shift;
+  if (c.on && sh) {
+    if (c.override === 'work' && c.cover_for_name) { cls = 'cov'; inner = `<b>${esc(sh.name)}</b><span class="t">${timeRange(sh)}</span><span class="rep">แทน ${esc(c.cover_for_name)}</span>`; }
+    else if (c.override === 'work') { cls = 'extra'; inner = `<b>${esc(sh.name)}</b><span class="t">${timeRange(sh)}</span><span>เพิ่ม/เปลี่ยนกะ</span>`; }
+    else { cls = 'on'; inner = `<b>${esc(sh.name)}</b><span class="t">${timeRange(sh)}</span>`; }
+    if (c.check_in) inner += `<span class="att ${c.late_min > 0 ? 'late' : 'ok'}">✓ ${c.check_in}${c.check_out ? '–' + c.check_out : ''}</span>`;
+    else if (c.status === 'missing' || c.status === 'absent') inner += `<span class="att miss">${c.status === 'absent' ? 'ไม่ได้เข้า' : 'ยังไม่เข้า'}</span>`;
+  } else if (c.override === 'off') {
+    cls = 'ovoff';
+    inner = `<b>หยุด</b>` + (sh ? `<s class="t">${esc(sh.name)} ${timeRange(sh)}</s>` : '') +
+      (c.cover_name ? `<span class="rep">แทนโดย ${esc(c.cover_name)}</span>` : '<span class="nocover">ยังไม่มีคนแทน</span>');
+  } else { cls = 'off'; inner = '—'; }
+  return `<td><div class="cell ${cls}" data-uid="${uid}" data-day="${c.day}">${inner}</div></td>`;
+}
+$('#wPrev').onclick = () => { weekStart.setDate(weekStart.getDate() - 7); loadSchedule(); };
+$('#wNext').onclick = () => { weekStart.setDate(weekStart.getDate() + 7); loadSchedule(); };
+$('#wNow').onclick = () => { weekStart = mondayOf(nowD()); loadSchedule(); };
+
+/* ---------------- edit shift dialog ---------------- */
+let EDIT = null;
+function setMode(m) {
+  $$('input[name=mode]').forEach(r => r.checked = r.value === m);
+  ['clear','off','work'].forEach(k => $('#m' + k[0].toUpperCase() + k.slice(1)).classList.toggle('sel', k === m));
+  $('#mOff .body').hidden = m !== 'off'; $('#mWork .body').hidden = m !== 'work';
+}
+async function openEdit(uid, day) {
+  let s;
+  try { s = await api('/api/schedule?start=' + day); } catch (e) { return toast(e.message, 'err'); }
+  const row = s.rows.find(r => r.user_id === uid), c = row.cells[s.days.indexOf(day)];
+  EDIT = {uid, day, c};
+  $('#eTitle').textContent = `${row.name} · ${dayLabelFull(day)}`;
+  let cur;
+  if (c.override === 'off') cur = `ตอนนี้: หยุด${c.cover_name ? ' (แทนโดย ' + c.cover_name + ')' : ' (ยังไม่มีคนแทน)'}`;
+  else if (c.override === 'work') cur = `ตอนนี้: ${c.shift.name} ${timeRange(c.shift)}${c.cover_for_name ? ' (ทำงานแทน ' + c.cover_for_name + ')' : ' (เพิ่ม/เปลี่ยนกะ)'}`;
+  else cur = c.on ? `ตอนนี้: ${c.shift.name} ${timeRange(c.shift)} (กะประจำ)` : 'ตอนนี้: ไม่มีกะ';
+  $('#eCurrent').textContent = cur;
+  const locked = !!c.check_in;
+  $('#eLocked').hidden = !locked; $('#eModes').hidden = locked; $('#eSave').disabled = locked;
+  $('#eShift').innerHTML = TEAMS.map(t => `<optgroup label="${esc(t.name)}">` + t.shifts.map(sh => `<option value="${sh.id}">${esc(sh.name)} ${sh.start_time}–${sh.end_time}</option>`).join('') + '</optgroup>').join('');
+  if (c.shift) $('#eShift').value = c.shift.id;
+  $('#mClear').hidden = !c.override;
+  const canOff = c.base;
+  $('#mOff').classList.toggle('dis', !canOff); $('#mOff').hidden = !canOff;
+  setMode(c.override === 'off' ? 'off' : c.override === 'work' ? 'work' : canOff ? 'off' : 'work');
+  $('#eCover').innerHTML = '<option value="">ยังไม่ระบุคนแทน</option>'; $('#eCoverHint').textContent = '';
+  if (canOff && c.shift) {
+    try {
+      const o = await api(`/api/admin/cover_options?user_id=${uid}&day=${day}`);
+      $('#eCover').innerHTML = '<option value="">ยังไม่ระบุคนแทน</option>' +
+        o.candidates.map(x => `<option value="${x.id}">${esc(x.name)} (${esc(x.team_name)})</option>`).join('') +
+        (o.blocked.length ? '<optgroup label="ทำงานแทนไม่ได้">' + o.blocked.map(x => `<option value="${x.id}" disabled>${esc(x.name)} — ${esc(x.reason)}</option>`).join('') + '</optgroup>' : '');
+      $('#eCover').value = c.cover_user_id || '';
+      $('#eCoverHint').textContent = `กะที่ต้องหาคนแทน: ${o.shift.name} ${timeRange(o.shift)}`;
+    } catch (e) { toast(e.message, 'err'); }
+  }
+  $('#dlgEdit').showModal();
+}
+$$('input[name=mode]').forEach(r => r.onchange = () => setMode(r.value));
+$('#eCancel').onclick = () => $('#dlgEdit').close();
+$('#editForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const mode = $('input[name=mode]:checked').value;
+  const body = {user_id: EDIT.uid, day: EDIT.day, action: mode};
+  if (mode === 'off') body.cover_user_id = $('#eCover').value || null;
+  if (mode === 'work') body.shift_id = +$('#eShift').value;
+  try {
+    await api('/api/admin/override', {method:'POST', body});
+    $('#dlgEdit').close(); toast('บันทึกแล้ว', 'good');
+    if (currentTab === 'dashboard') refreshDash(); else loadSchedule();
+  } catch (err) { toast(err.message, 'err'); }
+});
+
+/* ---------------- dashboard ---------------- */
+const STAT = {working:['กำลังทำงาน','ok'], done:['เลิกงานแล้ว','blue'], waiting:['รอถึงเวลา','off'], missing:['ยังไม่ check-in','bad'], absent:['ไม่ได้เข้างาน','bad'], off:['ไม่มีกะ','off']};
+async function refreshDash() {
+  if (!ME || ME.role !== 'admin') return;
+  let t, a;
+  try { t = await api('/api/admin/today'); a = await api('/api/admin/alerts'); } catch (e) { if (e.auth) guard(() => { throw e; }); return; }
+  const items = t.items, cnt = k => items.filter(i => i.status === k).length;
+  $('#todayStr').textContent = t.today;
+  $('#stats').innerHTML = [
+    ['กะที่ต้องดูแลตอนนี้', items.length, ''], ['กำลังทำงาน', cnt('working'), 'var(--ok)'], ['เลิกงานแล้ว', cnt('done'), 'var(--brand-text)'],
+    ['มาสาย', items.filter(i => i.late_min > 0 && i.check_in).length, 'var(--warn)'], ['ยังไม่เข้างาน', cnt('missing') + cnt('absent'), 'var(--bad)']
+  ].map(([l, v, c]) => `<div class="stat"><b style="color:${c || 'inherit'}">${v}</b><span>${l}</span></div>`).join('');
+  $('#todayTable').innerHTML = '<tr><th>ชื่อ</th><th>ทีม</th><th>กะ</th><th>เข้า</th><th>ออก</th><th>สถานะ</th></tr>' +
+    (items.map(i => { const [l, k] = STAT[i.status] || STAT.off;
+      return `<tr><td>${esc(i.name)}${i.cover_for_name ? `<br><span class="pill cover">แทน ${esc(i.cover_for_name)}</span>` : ''}</td><td>${esc(i.team_name)}</td>
+      <td class="num">${esc(i.shift ? i.shift.name : '')}<br><span class="muted small">${timeRange(i.shift)}</span></td>
+      <td class="num">${i.check_in || '-'}${i.late_min > 0 ? ` <span class="pill warn">+${i.late_min}m</span>` : ''}</td>
+      <td class="num">${i.check_out || '-'}${i.early_min > 0 ? ` <span class="pill warn">-${i.early_min}m</span>` : ''}</td>
+      <td><span class="pill ${k}">${l}</span></td></tr>`; }).join('') || '<tr><td colspan="6" class="muted">ตอนนี้ไม่มีกะที่ต้องดูแล</td></tr>');
+  $('#uncovered').innerHTML = t.uncovered.length ? `<div class="uncov"><h3>หยุดแล้วยังไม่มีคนทำงานแทน (${t.uncovered.length})</h3>` +
+    t.uncovered.map(u => `<div class="item"><span>${esc(u.name)} · ${dayLabel(u.day)} · ${esc(u.shift ? u.shift.name + ' ' + timeRange(u.shift) : '')}</span><button class="btn sm" data-fix="${u.user_id}|${u.day}">เลือกคนแทน</button></div>`).join('') + '</div>' : '';
+  $$('[data-fix]').forEach(b => b.onclick = () => { const [u, d] = b.dataset.fix.split('|'); openEdit(+u, d); });
+  const ICON = {late:'สาย', early:'ออกก่อน', noshow:'ไม่มา'};
+  $('#alerts').innerHTML = a.alerts.slice(0, 30).map(x => `<div class="alert ${x.is_read ? '' : 'unread'}"><span class="pill ${x.kind === 'noshow' ? 'bad' : 'warn'}">${ICON[x.kind] || '!'}</span><div>${esc(x.message)}<small>${esc(x.created_at)}</small></div></div>`).join('') || '<div class="muted">ยังไม่มีการแจ้งเตือน</div>';
+  const b = $('#alertBadge'); if (b) { b.hidden = !a.unread; b.textContent = a.unread; }
+  const maxId = a.alerts.reduce((m, x) => Math.max(m, x.id), 0);
+  if (lastAlertId !== null) a.alerts.filter(x => x.id > lastAlertId && !x.is_read).reverse().forEach(x => {
+    toast(x.message, 'warn', 12000); beep();
+    if ('Notification' in window && Notification.permission === 'granted') new Notification('Shift Check-in', {body: x.message});
+  });
+  lastAlertId = maxId;
+}
+$('#btnReadAll').onclick = () => guard(async () => { await api('/api/admin/alerts/read', {method:'POST', body:{}}); refreshDash(); });
+function startPolling() {
+  if (pollTimer) return;
+  if ('Notification' in window && Notification.permission === 'default') try { Notification.requestPermission(); } catch (e) {}
+  pollTimer = setInterval(() => { if (ME && ME.role === 'admin') refreshDash(); }, 10000);
+}
+function stopPolling() { clearInterval(pollTimer); pollTimer = null; lastAlertId = null; }
+
+/* ---------------- team & users ---------------- */
+let USERS = [];
+function showInvite(title, desc, name, username, code) {
+  $('#iTitle').textContent = title; $('#iDesc').textContent = desc; $('#iCode').textContent = code; $('#iUser').textContent = username;
+  const url = location.origin + location.pathname; $('#iUrl').textContent = url;
+  $('#iCopy').onclick = () => copyText(`สวัสดีครับ คุณ${name}\nลงทะเบียนเข้าระบบ Shift Check-in ได้ที่ ${url}\nเลือก "ลงทะเบียนครั้งแรก" แล้วกรอก\nชื่อผู้ใช้: ${username}\nรหัสเชิญ: ${code}\n(รหัสเชิญใช้ได้ครั้งเดียว แล้วตั้งรหัสผ่านของตัวเอง)`);
+  $('#dlgInvite').showModal();
+}
+async function loadTeamTab() {
+  await guard(async () => {
+    const r = await api('/api/admin/users'); USERS = r.users; TEAMS = r.teams;
+    const shiftById = id => { for (const t of TEAMS) for (const s of t.shifts) if (s.id === id) return s; return null; };
+    $('#teamTable').innerHTML = '<tr><th>ทีม</th><th>วันที่เริ่มกะ</th><th>กะ</th><th>สมาชิก</th><th></th></tr>' +
+      TEAMS.map(t => `<tr><td><b>${esc(t.name)}</b></td><td>${t.days.split(',').map(d => DAYS[+d]).join(' ')}</td>
+        <td class="num">${t.shifts.map(s => `${esc(s.name)} ${s.start_time}–${s.end_time}${s.end_time <= s.start_time ? ' (+1)' : ''}`).join('<br>')}</td>
+        <td>${t.member_count} คน</td><td style="text-align:right;white-space:nowrap"><button class="btn sm" data-et="${t.id}">แก้ไข</button> <button class="btn sm danger" data-dt="${t.id}">ลบ</button></td></tr>`).join('');
+    $('#userTable').innerHTML = '<tr><th>ชื่อ</th><th>ชื่อผู้ใช้</th><th>ทีม</th><th>กะประจำ</th><th>บัญชี</th><th></th></tr>' +
+      (USERS.map(m => { const sh = shiftById(m.shift_id), t = TEAMS.find(x => x.id === m.team_id);
+        return `<tr><td><b>${esc(m.name)}</b>${m.note ? `<br><span class="muted small">${esc(m.note)}</span>` : ''}<br><span class="muted small">${esc(m.phone)} ${esc(m.email)}</span></td><td class="num mono">${esc(m.username)}</td>
+        <td>${esc(t ? t.name : '—')}</td><td class="num">${sh ? esc(sh.name) + '<br><span class="muted small">' + sh.start_time + '–' + sh.end_time + '</span>' : '—'}</td>
+        <td>${m.claimed ? '<span class="pill ok">ลงทะเบียนแล้ว</span>' : `<span class="pill warn">รอลงทะเบียน</span><br><span class="mono code">${esc(m.invite_code)}</span> <button class="btn sm" data-inv="${m.id}">ส่งรหัส</button>`}</td>
+        <td style="text-align:right;white-space:nowrap"><button class="btn sm" data-eu="${m.id}">แก้ไข</button> ${m.claimed ? `<button class="btn sm" data-ru="${m.id}">รีเซ็ตบัญชี</button> ` : ''}<button class="btn sm danger" data-du="${m.id}">ลบ</button></td></tr>`; }).join('') || '<tr><td colspan="6" class="muted">ยังไม่มีสมาชิก กด "+ เพิ่มสมาชิก"</td></tr>');
+    $$('[data-et]').forEach(b => b.onclick = () => openTeam(TEAMS.find(t => t.id === +b.dataset.et)));
+    $$('[data-eu]').forEach(b => b.onclick = () => openUser(USERS.find(m => m.id === +b.dataset.eu)));
+    $$('[data-inv]').forEach(b => b.onclick = () => { const m = USERS.find(x => x.id === +b.dataset.inv); showInvite('รหัสเชิญของ ' + m.name, 'ส่งรหัสนี้ให้สมาชิกเพื่อลงทะเบียนครั้งแรก', m.name, m.username, m.invite_code); });
+    $$('[data-ru]').forEach(b => b.onclick = async () => {
+      const m = USERS.find(x => x.id === +b.dataset.ru);
+      if (!await confirmBox(`รีเซ็ตบัญชีของ "${m.name}"?\nรหัสผ่านเดิมจะใช้ไม่ได้ทันที และสมาชิกต้องลงทะเบียนใหม่ด้วยรหัสเชิญใหม่\n(ประวัติและตารางกะไม่หาย)`)) return;
+      await guard(async () => { const r = await api('/api/admin/users/' + m.id + '/reset', {method:'POST', body:{}}); loadTeamTab(); showInvite('รหัสเชิญใหม่ของ ' + m.name, 'บัญชีเดิมถูกล้างแล้ว ให้สมาชิกลงทะเบียนใหม่ด้วยรหัสนี้', m.name, m.username, r.invite_code); });
+    });
+    $$('[data-du]').forEach(b => b.onclick = async () => {
+      const m = USERS.find(x => x.id === +b.dataset.du);
+      if (!await confirmBox(`ลบสมาชิก "${m.name}" ออกจากระบบ?\nบัญชีล็อกอินจะถูกลบด้วย ประวัติการเข้างานเดิมยังเก็บไว้`)) return;
+      await guard(async () => { await api('/api/admin/users/' + m.id, {method:'DELETE'}); toast('ลบแล้ว', 'good'); loadTeamTab(); });
+    });
+    $$('[data-dt]').forEach(b => b.onclick = async () => {
+      const t = TEAMS.find(x => x.id === +b.dataset.dt);
+      if (!await confirmBox(`ลบทีม "${t.name}" และกะทั้งหมดของทีม?\nสมาชิก ${t.member_count} คนจะถูกย้ายไปเป็น "ไม่มีทีม"`)) return;
+      await guard(async () => { await api('/api/admin/teams/' + t.id, {method:'DELETE'}); toast('ลบแล้ว', 'good'); loadTeamTab(); });
+    });
+  });
+}
+let editUserId = null;
+function fillShiftSelect(teamId, sel) {
+  const t = TEAMS.find(x => x.id === +teamId);
+  $('#uShift').innerHTML = '<option value="">— ไม่มีกะประจำ —</option>' + (t ? t.shifts.map(s => `<option value="${s.id}">${esc(s.name)} ${s.start_time}–${s.end_time}</option>`).join('') : '');
+  $('#uShift').value = sel || '';
+}
+function openUser(m) {
+  editUserId = m ? m.id : null;
+  $('#uTitle').textContent = m ? 'แก้ไขสมาชิก' : 'เพิ่มสมาชิก';
+  $('#uTeam').innerHTML = '<option value="">ไม่มีทีม</option>' + TEAMS.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
+  $('#uName').value = m?.name || ''; $('#uUser').value = m?.username || ''; $('#uTeam').value = m?.team_id ?? '';
+  $('#uUser').disabled = !!(m && m.claimed); $('#uUserHint').hidden = !(m && m.claimed); $('#uNewHint').hidden = !!m;
+  fillShiftSelect(m?.team_id, m?.shift_id);
+  $('#uPhone').value = m?.phone || ''; $('#uEmail').value = m?.email || ''; $('#uNote').value = m?.note || '';
+  $('#dlgUser').showModal();
+}
+$('#uTeam').onchange = () => fillShiftSelect($('#uTeam').value, '');
+$('#btnAddUser').onclick = () => openUser(null);
+$('#userForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const body = {name:$('#uName').value, username:$('#uUser').value, team_id:$('#uTeam').value || null, shift_id:$('#uShift').value || null,
+    phone:$('#uPhone').value, email:$('#uEmail').value, note:$('#uNote').value};
+  try {
+    const r = await api(editUserId ? '/api/admin/users/' + editUserId : '/api/admin/users', {method: editUserId ? 'PUT' : 'POST', body});
+    $('#dlgUser').close(); toast('บันทึกแล้ว', 'good'); loadTeamTab();
+    if (!editUserId && r.invite_code) showInvite('เพิ่มสมาชิกแล้ว', 'ส่งรหัสเชิญนี้ให้สมาชิก (ดูรหัสซ้ำได้ที่ตารางบัญชีสมาชิก จนกว่าจะลงทะเบียน)', body.name, body.username.trim().toLowerCase(), r.invite_code);
+  } catch (err) { toast(err.message, 'err'); }
+});
+let editTeamId = null;
+function shiftRow(s = {}) {
+  const d = document.createElement('div'); d.className = 'shiftrow'; d.dataset.id = s.id || '';
+  d.innerHTML = `<input class="sn" placeholder="ชื่อกะ" value="${esc(s.name || '')}" aria-label="ชื่อกะ" required><input class="ss" inputmode="numeric" maxlength="5" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" placeholder="HH:MM" title="เวลา 24 ชั่วโมง เช่น 08:30" value="${s.start_time || '09:00'}" aria-label="เวลาเริ่ม (24 ชั่วโมง)" required><input class="se" inputmode="numeric" maxlength="5" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" placeholder="HH:MM" title="เวลา 24 ชั่วโมง เช่น 17:30" value="${s.end_time || '18:00'}" aria-label="เวลาเลิก (24 ชั่วโมง)" required><button type="button" class="btn sm danger" aria-label="ลบกะ">ลบ</button>`;
+  d.querySelector('button').onclick = () => d.remove();
+  return d;
+}
+function openTeam(t) {
+  editTeamId = t ? t.id : null;
+  $('#tTitle').textContent = t ? 'แก้ไขทีม' : 'เพิ่มทีม';
+  $('#tName').value = t?.name || '';
+  const sel = t ? t.days.split(',') : ['0','1','2','3','4'];
+  $('#tDays').innerHTML = DAYN.map((n, i) => `<label><input type="checkbox" value="${i}" ${sel.includes(String(i)) ? 'checked' : ''}>${n}</label>`).join('');
+  $('#tShifts').innerHTML = ''; (t ? t.shifts : [{}]).forEach(s => $('#tShifts').appendChild(shiftRow(s)));
+  $('#dlgTeam').showModal();
+}
+$('#tAddShift').onclick = () => $('#tShifts').appendChild(shiftRow({name: 'กะ ' + ($$('#tShifts .shiftrow').length + 1)}));
+$('#btnAddTeam').onclick = () => openTeam(null);
+$('#teamForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const shifts = $$('#tShifts .shiftrow').map(r => ({id: r.dataset.id ? +r.dataset.id : null, name: r.querySelector('.sn').value, start_time: r.querySelector('.ss').value, end_time: r.querySelector('.se').value}));
+  const body = {name:$('#tName').value, days:$$('#tDays input:checked').map(i => +i.value), shifts};
+  try {
+    await api(editTeamId ? '/api/admin/teams/' + editTeamId : '/api/admin/teams', {method: editTeamId ? 'PUT' : 'POST', body});
+    $('#dlgTeam').close(); toast('บันทึกแล้ว', 'good'); loadTeamTab();
+  } catch (err) { toast(err.message, 'err'); }
+});
+
+/* ---------------- history ---------------- */
+async function loadHistory() {
+  await guard(async () => {
+    if (!$('#hFrom').value) { const n = nowD(), f = new Date(n); f.setDate(f.getDate() - 7); $('#hFrom').value = isoDate(f); $('#hTo').value = isoDate(n); }
+    const r = await api(`/api/admin/attendance?from=${$('#hFrom').value}&to=${$('#hTo').value}`);
+    $('#histTable').innerHTML = '<tr><th>วันที่</th><th>ชื่อ</th><th>กะ</th><th>เข้า</th><th>ออก</th><th>สาย</th><th>ออกก่อน</th></tr>' +
+      (r.rows.map(x => `<tr class="num"><td>${x.day}</td><td>${esc(x.user_name)}</td><td>${esc(x.shift_name || '')}<br><span class="muted small">${(x.shift_start || '').slice(11, 16)}–${(x.shift_end || '').slice(11, 16)}</span></td>
+        <td>${(x.check_in || '').slice(5, 16) || '-'}</td><td>${(x.check_out || '').slice(5, 16) || '-'}</td>
+        <td>${x.late_min > 0 ? `<span class="pill warn">${x.late_min} นาที</span>` : '-'}</td>
+        <td>${x.early_min > 0 ? `<span class="pill warn">${x.early_min} นาที</span>` : '-'}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">ไม่มีข้อมูลในช่วงวันที่นี้</td></tr>');
+  });
+}
+$('#hGo').onclick = loadHistory;
+
+/* ---------------- settings ---------------- */
+async function loadSettings() {
+  await guard(async () => {
+    const s = await api('/api/admin/settings');
+    $('#sLate').value = s.late_min; $('#sEarly').value = s.early_min; $('#sNoshow').value = s.noshow_min; $('#sOpen').value = s.checkin_open_min;
+  });
+}
+$('#sSave').onclick = async () => {
+  try {
+    await api('/api/admin/settings', {method:'PUT', body:{late_min:$('#sLate').value, early_min:$('#sEarly').value, noshow_min:$('#sNoshow').value, checkin_open_min:$('#sOpen').value}});
+    toast('บันทึกการตั้งค่าแล้ว', 'good');
+  } catch (e) { toast(e.message, 'err'); }
+};
+
+/* ================= init ================= */
+applyThemeLabel();
+(function init() {
+  if (!CONFIGURED) { showView('setupView'); return; }
+  if (!window.supabase || !window.supabase.createClient) {
+    $('#setupMsg').textContent = 'โหลดไลบรารี Supabase ไม่สำเร็จ (อาจถูกบล็อกอินเทอร์เน็ตหรือโฆษณา) ลองรีเฟรชหน้า';
+    $('#setupView h3').textContent = 'เชื่อมต่อไม่ได้'; showView('setupView'); return;
+  }
+  sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, {auth: {persistSession: true, autoRefreshToken: true}});
+  sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT' && ME) showLogin(); });
+  boot();
+})();
+</script>
+</body>
+</html>
